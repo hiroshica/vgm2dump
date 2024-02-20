@@ -1,4 +1,4 @@
-// Ported from NSFPlay to VGMPlay (including C++ -> C conversion)
+﻿// Ported from NSFPlay to VGMPlay (including C++ -> C conversion)
 // by Valley Bell on 25 September 2013
 // Updated to NSFPlay 2.3 on 26 September 2013
 // (Note: Encoding is UTF-8)

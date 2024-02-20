@@ -1,4 +1,4 @@
-#ifndef __OOTAKE_PSG_PRIVATE_H__
+﻿#ifndef __OOTAKE_PSG_PRIVATE_H__
 #define __OOTAKE_PSG_PRIVATE_H__
 
 /*-----------------------------------------------------------------------------
