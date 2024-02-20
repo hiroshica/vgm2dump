@@ -32,9 +32,9 @@
 #include "helper.h"
 #include "../emu/logging.h"
 
-#ifdef _MSC_VER
-#define snprintf	_snprintf
-#endif
+//#ifdef _MSC_VER
+//#define snprintf	_snprintf
+//#endif
 
 /*static*/ const UINT8 VGMPlayer::_OPT_DEV_LIST[_OPT_DEV_COUNT] =
 {

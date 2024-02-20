@@ -28,23 +28,27 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -110,7 +114,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;AUDDRV_WAVEWRITE;AUDDRV_WINMM;AUDDRV_DSOUND;AUDDRV_XAUD2;AUDDRV_WASAPI;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;AUDDRV_WAVEWRITE;AUDDRV_WINMM;AUDDRV_DSOUND;AUDDRV_XAUD2;AUDDRV_WASAPI;WIN32;_DEBUG;_CONSOLE;VGM_LITTLE_ENDIAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -156,7 +160,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="common_def.h" />
-    <ClInclude Include="player\droplayer.hpp" />
     <ClInclude Include="player\gymplayer.hpp" />
     <ClInclude Include="player\playera.hpp" />
     <ClInclude Include="utils\DataLoader.h" />
@@ -164,7 +167,6 @@
     <ClInclude Include="utils\MemoryLoader.h" />
     <ClInclude Include="player\helper.h" />
     <ClInclude Include="player\playerbase.hpp" />
-    <ClInclude Include="player\s98player.hpp" />
     <ClInclude Include="player\vgmplayer.hpp" />
     <ClInclude Include="stdbool.h" />
     <ClInclude Include="stdtype.h" />
@@ -190,7 +192,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="player.cpp" />
-    <ClCompile Include="player\droplayer.cpp" />
     <ClCompile Include="player\gymplayer.cpp" />
     <ClCompile Include="player\playera.cpp" />
     <ClCompile Include="utils\DataLoader.c" />
@@ -198,14 +199,9 @@
     <ClCompile Include="utils\MemoryLoader.c" />
     <ClCompile Include="player\helper.c" />
     <ClCompile Include="player\playerbase.cpp" />
-    <ClCompile Include="player\s98player.cpp" />
     <ClCompile Include="player\vgmplayer.cpp" />
     <ClCompile Include="player\vgmplayer_cmdhandler.cpp" />
     <ClCompile Include="utils\StrUtils-CPConv_Win.c" />
-    <ClCompile Include="vgmtest.c">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="player\dblk_compr.c" />
     <ClCompile Include="vgm_dbcompr_bench.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
