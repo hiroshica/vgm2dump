@@ -51,6 +51,9 @@
     <ClInclude Include="player\gymplayer.hpp">
       <Filter>Headerdateien</Filter>
     </ClInclude>
+    <ClInclude Include="Record.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="emutest.c">
@@ -72,9 +75,6 @@
       <Filter>Quelldateien</Filter>
     </ClCompile>
     <ClCompile Include="player\playerbase.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
-    <ClCompile Include="player.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
     <ClCompile Include="player\vgmplayer.cpp">
@@ -99,6 +99,12 @@
       <Filter>Quelldateien</Filter>
     </ClCompile>
     <ClCompile Include="player\gymplayer.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="Record.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="vgmtest.c">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>

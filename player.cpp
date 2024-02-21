@@ -41,6 +41,7 @@ extern "C" int __cdecl _kbhit(void);
 #include "emu/SoundDevs.h"	// for DEVID_*
 #include "emu/EmuCores.h"
 #include "utils/OSMutex.h"
+#include "Record.h"
 
 //#define USE_MEMORY_LOADER 1	// define to use the in-memory loader
 
@@ -172,7 +173,8 @@ int main(int argc, char* argv[])
 		fprintf(stderr, "Error 0x%02X loading file!\n", retVal);
 		continue;
 	}
-	
+
+	ResetRecord();
 	PlayerBase* player = mainPlr.GetPlayer();
 	mainPlr.SetLoopCount(maxLoops);
 	if (player->GetPlayerType() == FCC_VGM)
@@ -315,6 +317,9 @@ int main(int argc, char* argv[])
 #endif
 	playState &= ~PLAYSTATE_END;
 	needRefresh = true;
+	double old_time = 0;
+	double now_time = 0;
+	double total_time = mainPlr.GetTotalTime(pbTimeMode);
 	while(! (playState & PLAYSTATE_END))
 	{
 		if (! (playState & PLAYSTATE_PAUSE))
@@ -331,9 +336,13 @@ int main(int argc, char* argv[])
 				pState = "Fading ";
 			else
 				pState = "Playing";
+			//
 			if (vgmPcmStrms == NULL || vgmPcmStrms->empty())
 			{
-				printf("%s %.2f / %.2f ...   \r", pState, mainPlr.GetCurTime(pbTimeMode), mainPlr.GetTotalTime(pbTimeMode));
+				now_time = mainPlr.GetCurTime(pbTimeMode);
+				printf("%s %.2f / %.2f (%.2f)...   \r", pState, now_time, total_time,now_time-old_time);
+				old_time = now_time;
+
 			}
 			else
 			{
@@ -449,6 +458,7 @@ int main(int argc, char* argv[])
 	mainPlr.Stop();
 	mainPlr.UnloadFile();
 	DataLoader_Deinit(dLoad);	dLoad = NULL;
+	ResetRecord();
 #ifdef USE_MEMORY_LOADER
 	free(fileData);
 #endif

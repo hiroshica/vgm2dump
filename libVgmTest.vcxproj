@@ -162,6 +162,7 @@
     <ClInclude Include="common_def.h" />
     <ClInclude Include="player\gymplayer.hpp" />
     <ClInclude Include="player\playera.hpp" />
+    <ClInclude Include="Record.h" />
     <ClInclude Include="utils\DataLoader.h" />
     <ClInclude Include="utils\FileLoader.h" />
     <ClInclude Include="utils\MemoryLoader.h" />
@@ -191,9 +192,9 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="player.cpp" />
     <ClCompile Include="player\gymplayer.cpp" />
     <ClCompile Include="player\playera.cpp" />
+    <ClCompile Include="Record.cpp" />
     <ClCompile Include="utils\DataLoader.c" />
     <ClCompile Include="utils\FileLoader.c" />
     <ClCompile Include="utils\MemoryLoader.c" />
@@ -203,6 +204,7 @@
     <ClCompile Include="player\vgmplayer_cmdhandler.cpp" />
     <ClCompile Include="utils\StrUtils-CPConv_Win.c" />
     <ClCompile Include="player\dblk_compr.c" />
+    <ClCompile Include="vgmtest.c" />
     <ClCompile Include="vgm_dbcompr_bench.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>

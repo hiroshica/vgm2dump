@@ -32,6 +32,7 @@ int __cdecl _getch(void);	// from conio.h
 #include "emu/EmuCores.h"
 #include "emu/dac_control.h"
 #include "emu/cores/sn764intf.h"	// for SN76496_CFG
+#include "emu/cores/sn76489_private.h"	// for SN76496_CFG
 #include "emu/cores/segapcm.h"		// for SEGAPCM_CFG
 #include "emu/cores/ayintf.h"		// for AY8910_CFG
 #include "emu/cores/okim6258.h"		// for OKIM6258_CFG
@@ -41,6 +42,7 @@ int __cdecl _getch(void);	// from conio.h
 #include "emu/cores/es5506.h"
 
 #include "player/dblk_compr.h"
+#include "Record.h"
 
 
 typedef struct _vgm_file_header
@@ -356,8 +358,10 @@ Exit_AudDeinit:
 	printf("Done.\n");
 	
 #if defined(_DEBUG) && (_MSC_VER >= 1400)
-	if (_CrtDumpMemoryLeaks())
+	if (_CrtDumpMemoryLeaks()) {
+		printf("Memory leaks\n");
 		_getch();
+	}
 #endif
 	
 	return 0;
@@ -439,6 +443,13 @@ static UINT32 FillBuffer(void* drvStruct, void* userParam, UINT32 bufSize, void*
 			fnlSmpl.R = +0x7FFF;
 		SmplPtr16[0] = (INT16)fnlSmpl.L;
 		SmplPtr16[1] = (INT16)fnlSmpl.R;
+		// register dump
+		{
+			//SendChipCommand_Data8(0x00, chipID, SN76496_W_REG, data[0x01]);
+			VGM_CHIPDEV* cDev = &VGMChips[0][0];
+			SN76489_Context* chip = cDev->defInf.dataPtr;
+		}
+		// register dump
 	}
 	
 	return curSmpl * smplSize;
@@ -849,7 +860,8 @@ static void InitVGMChips(void)
 		// already done by SndEmu_Start()
 		//cDev->defInf.devDef->Reset(cDev->defInf.dataPtr);
 		
-		Resmpl_SetVals(&cDev->resmpl, 0xFF, 0x100, sampleRate);
+		//Resmpl_SetVals(&cDev->resmpl, 0xFF, 0x100, sampleRate);
+		Resmpl_SetVals(&cDev->resmpl, RSMODE_LINEAR, 0x100, sampleRate);
 		Resmpl_DevConnect(&cDev->resmpl, &cDev->defInf);
 		Resmpl_Init(&cDev->resmpl);
 		clDev = cDev->linkDev;
@@ -945,13 +957,13 @@ static void DeinitVGMChips(void)
 
 static void SendChipCommand_Data8(UINT8 chipID, UINT8 chipNum, UINT8 ofs, UINT8 data)
 {
-	VGM_CHIPDEV* cDev;
-	
-	cDev = &VGMChips[chipID][chipNum];
+	VGM_CHIPDEV* cDev = &VGMChips[chipID][chipNum];
 	if (cDev->write8 == NULL)
 		return;
 	
 	cDev->write8(cDev->defInf.dataPtr, ofs, data);
+
+	//printf("SendData8 [%4x:%4x]\n", ofs, data);
 	return;
 }
 
