@@ -53,16 +53,17 @@ int CalcNote(int freq)
 void WriteRecord(int chan, unsigned short freq, unsigned short vol, int frameCount)
 {
     bool addflag = false;
+    int note = (int)freq;
+    if (chan < 4) {
+        //note = CalcNote((int)freq);
+    }
     if (RecordTable[chan].empty()) {
         addflag = true;
     }
     else {
         RecordData* oldrecord = RecordTable[chan][RecordTable[chan].size() - 1];
-        int newnote = (int)freq;
-        if (chan < 4) {
-            newnote = CalcNote((int)freq);
-        }
-        if (newnote != oldrecord->note) {
+        if (note != oldrecord->note) {
+            oldrecord->time = frameCount - oldrecord->time;
             addflag = true;
         }
         if (vol == 0x0f) {
@@ -74,10 +75,6 @@ void WriteRecord(int chan, unsigned short freq, unsigned short vol, int frameCou
         RecordData* record = (RecordData*)malloc(sizeof(RecordData));
         if (record != NULL)
         {
-            int note = (int)freq;
-            if (chan < 4) {
-                note = CalcNote((int)freq);
-            }
             record->note = note;
             record->vol = vol;
             record->time = frameCount;

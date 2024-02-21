@@ -344,6 +344,7 @@ int main(int argc, char* argv[])
 	canRender = true;
 	while(1)
 	{
+#if 0
 		int inkey = getchar();
 		if (toupper(inkey) == 'P')
 			AudioDrv_Pause(audDrv);
@@ -353,6 +354,11 @@ int main(int argc, char* argv[])
 			break;
 		while(getchar() != '\n')
 			;
+#else
+		if (VGMEndFlag) {
+			break;
+		}
+#endif
 	}
 	canRender = false;
 	
@@ -360,6 +366,7 @@ int main(int argc, char* argv[])
 	if (audDrvLog != NULL)
 		retVal = AudioDrv_Stop(audDrvLog);
 	free(smplData);	smplData = NULL;
+	ResetRecord();
 	
 Exit_SndDrvDeinit:
 	DeinitVGMChips();
@@ -461,14 +468,13 @@ static UINT32 FillBuffer(void* drvStruct, void* userParam, UINT32 bufSize, void*
 		SmplPtr16[0] = (INT16)fnlSmpl.L;
 		SmplPtr16[1] = (INT16)fnlSmpl.R;
 		// register dump
+//#define TESTLOG
 		{
-			//SendChipCommand_Data8(0x00, chipID, SN76496_W_REG, data[0x01]);
-			//VGM_CHIPDEV* cDev = &VGMChips[0][0];
-			//SN76489_Context* chip = cDev->defInf.dataPtr;
 			for (int iI = 0; iI < 4; iI++) {
 				int index = iI << 1;
-				//WriteRecord(iI, Register[index], Register[index + 1], frameCount);
-#if 1
+#ifndef TESTLOG
+				WriteRecord(iI, Register[index], Register[index + 1], frameCount);
+#else
 				if (Register[index +1] != 0x0f) {
 					printf("[%d::%4x:%2x] ", iI, Register[index], Register[index + 1]);
 				}
@@ -478,7 +484,9 @@ static UINT32 FillBuffer(void* drvStruct, void* userParam, UINT32 bufSize, void*
 				}
 #endif
 			}
+#ifdef TESTLOG
 			printf("\r");
+#endif
 		}
 		frameCount++;
 		// register dump

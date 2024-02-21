@@ -4,7 +4,7 @@
 typedef struct recorddata{
     int    note;
     int    vol;
-    double time;
+    int    time;
 } RecordData;
 
 void ResetRecord();
