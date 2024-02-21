@@ -11,6 +11,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <zlib.h>
+#include <string>
 
 #ifdef __cplusplus
 extern "C" {
@@ -214,6 +215,9 @@ VGM_PCM_BANK PCMBank[PCM_BANK_COUNT];
 PCM_COMPR_TBL PCMComprTbl;
 UINT32 ym2612_pcmBnkPos;
 
+char vgmfile[2048];
+char dumpfile[2048] = "test.dump";
+
 int main(int argc, char* argv[])
 {
 	gzFile hFile;
@@ -229,13 +233,26 @@ int main(int argc, char* argv[])
 
 	if (argc < 2)
 	{
-		printf("Usage: vgmtest vgmfile.vgz\n");
+		printf("Usage: vgmtest -vgm vgmfile -dump dumpfile\n");
 		return 0;
 	}
+		// check option
+	for (int iI = 0; iI < argc; ++iI)
+	{
+		if (strcmp(argv[iI], "-vgm") == 0) {
+			iI++;
+			strcpy(vgmfile, argv[iI]);
+		}
+		else if (strcmp(argv[iI], "-dump") == 0) {
+			iI++;
+			strcpy(dumpfile, argv[iI]);
+		}
+	}
+
 	VGMEndFlag = false;
 
 	printf("Loading VGM ...\n");
-	hFile = gzopen(argv[1], "rb");
+	hFile = gzopen(vgmfile, "rb");
 	if (hFile == NULL)
 	{
 		printf("Error opening file.\n");
@@ -366,7 +383,7 @@ int main(int argc, char* argv[])
 	if (audDrvLog != NULL)
 		retVal = AudioDrv_Stop(audDrvLog);
 	free(smplData);	smplData = NULL;
-	DumpRecord("test.dump");
+	DumpRecord(dumpfile);
 	ResetRecord();
 	
 Exit_SndDrvDeinit:

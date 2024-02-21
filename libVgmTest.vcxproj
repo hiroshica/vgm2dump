@@ -204,7 +204,7 @@
     <ClCompile Include="player\vgmplayer_cmdhandler.cpp" />
     <ClCompile Include="utils\StrUtils-CPConv_Win.c" />
     <ClCompile Include="player\dblk_compr.c" />
-    <ClCompile Include="vgmtest.cpp" />
+    <ClCompile Include="vgmdump.cpp" />
     <ClCompile Include="vgm_dbcompr_bench.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>

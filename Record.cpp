@@ -50,22 +50,44 @@ int CalcNote(int freq)
     }
     return n;
 }
+void callback()
+{
+
+}
 
 void WriteRecord(int chan, unsigned short freq, unsigned short vol, int frameCount)
 {
+    if (chan == 0) {
+        callback();
+    }
     bool addflag = false;
     if (RecordTable[chan].empty()) {
         addflag = true;
     }
     else {
         RecordData* oldrecord = RecordTable[chan][RecordTable[chan].size() - 1];
-        if (freq != oldrecord->freq) {
-            oldrecord->time = frameCount - oldrecord->time;
+        if(vol == 0x0f)
+        {
+            // mute data
+            freq = 0;
+            if (vol == oldrecord->vol) {
+                oldrecord->elaptime = frameCount;
+            }
+            else {
+                addflag = true;
+            }
+        }
+        else if (freq != oldrecord->freq) {
+            oldrecord->elaptime = frameCount;
             addflag = true;
         }
-        if (vol == 0x0f) {
-            oldrecord->time = frameCount - oldrecord->time;
+        else if (vol != oldrecord->vol) {
+            oldrecord->elaptime = frameCount;
             addflag = true;
+        }
+        else {
+            // freq/vol —¼•û‚Æ‚à“¯‚¶ƒf[ƒ^‚¾‚Á‚½
+            oldrecord->elaptime = frameCount;
         }
     }
     if (addflag) {
@@ -78,13 +100,15 @@ void WriteRecord(int chan, unsigned short freq, unsigned short vol, int frameCou
                 record->note = CalcNote((int)freq);
             }
             record->vol = vol;
-            record->time = frameCount;
+            record->starttime = frameCount;
+            record->elaptime = frameCount;
             RecordTable[chan].push_back(record);
         }
     }
 }
 
 #define WBUFF_SIZE   (1024)
+char wbuf_tmp[WBUFF_SIZE];
 char wbuf[WBUFF_SIZE];
 char* note_str[] = {
     "C", "C+",
@@ -101,26 +125,52 @@ void DumpRecord(char* filename)
     int wsize;
     if (fp != NULL) {
         for (int iI = 0; iI < CH_MAX; ++iI) {
-            wsize = sprintf_s(wbuf, WBUFF_SIZE, ";Channel %d Start -----\n", iI);
+            wsize = sprintf_s(wbuf, WBUFF_SIZE, ";Channel %d Start -----", iI);
             fwrite(wbuf, wsize, 1, fp);
+            RecordData* oldrecord = NULL;
             for (RecordData* record : RecordTable[iI]) {
+                int time = record->elaptime - record->starttime;
                 if (iI < (CH_MAX - 1))
                 {
-                    if (record->freq == 0) {
-                        wsize = sprintf_s(wbuf, WBUFF_SIZE, "---- V%d %d\n", record->vol, record->time);
+                    // tone channel
+                    sprintf_s(wbuf_tmp, WBUFF_SIZE, " ");
+                    if (record->vol == 0x0f) {
+                        //if(!((oldrecord != NULL) && (oldrecord->vol != record->vol)))
+                        {
+                            sprintf_s(wbuf_tmp, WBUFF_SIZE, "REST ");
+                        }
                     }
-                    else {
+                    else if (record->freq == 0) {
+                        sprintf_s(wbuf_tmp, WBUFF_SIZE, "---- ");
+                    }
+                    else if((oldrecord != NULL) && (oldrecord->note != record->note))
+                    {
                         int o = record->note / 12;
                         int n = record->note % 12;
-                        wsize = sprintf_s(wbuf, WBUFF_SIZE, "o%d %s V%d %d\n", o, note_str[n], record->vol, record->time);
+                        sprintf_s(wbuf_tmp, WBUFF_SIZE, "o%d %s ", o, note_str[n]);
                     }
+
+                    if (oldrecord == NULL) {
+                        wsize = sprintf_s(wbuf, WBUFF_SIZE, "\n%s[V%d:%d]", wbuf_tmp, record->vol, time);
+                    }
+                    else if (oldrecord->note == record->note)
+                    {
+                        wsize = sprintf_s(wbuf, WBUFF_SIZE, "%s[V%d:%d] ", wbuf_tmp, record->vol, time);
+                    }
+                    else
+                    {
+                        wsize = sprintf_s(wbuf, WBUFF_SIZE, "\n%s[V%d:%d] ", wbuf_tmp, record->vol, time);
+                    }
+                    oldrecord = record;
+                    // tone channel
                 }
                 else {
-                    wsize = sprintf_s(wbuf, WBUFF_SIZE, " freq 0x%04x V%d %d\n", record->freq, record->vol, record->time);
+                    // noise channel
+                    wsize = sprintf_s(wbuf, WBUFF_SIZE, " freq 0x%04x V%d %d\n", record->freq, record->vol, time);
                 }
                 fwrite(wbuf, wsize, 1, fp);
             }
-            wsize = sprintf_s(wbuf, WBUFF_SIZE, ";Channel %d End -----\n", iI);
+            wsize = sprintf_s(wbuf, WBUFF_SIZE, "\n;Channel %d End -----\n", iI);
             fwrite(wbuf, wsize, 1, fp);
         }
         fclose(fp);

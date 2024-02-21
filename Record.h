@@ -5,7 +5,8 @@ typedef struct recorddata{
     int    note;
     unsigned short freq;
     unsigned short vol;
-    int    time;
+    int    starttime;
+    int    elaptime;
 } RecordData;
 
 void ResetRecord();
