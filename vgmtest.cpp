@@ -12,6 +12,10 @@
 #include <ctype.h>
 #include <zlib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifdef _WIN32
 int __cdecl _getch(void);	// from conio.h
 #else
@@ -19,6 +23,11 @@ int __cdecl _getch(void);	// from conio.h
 #include <unistd.h>		// for usleep()
 #define	Sleep(msec)	usleep(msec * 1000)
 #endif
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #define VGM_LONG_UPDATE	0
 
@@ -176,6 +185,11 @@ static UINT32 DoVgmCommand(UINT8 cmd, const UINT8* data);
 static void ReadVGMFile(UINT32 samples);
 
 
+static INT LatchedRegister = -1;
+static unsigned short Register[8];
+static bool VGMEndFlag = false;
+
+
 static UINT32 smplSize;
 static void* audDrv;
 static void* audDrvLog;
@@ -212,13 +226,14 @@ int main(int argc, char* argv[])
 	AUDIO_OPTS* opts;
 	const AUDIO_DEV_LIST *devList;
 	UINT32 tempData[2];
-	
+
 	if (argc < 2)
 	{
 		printf("Usage: vgmtest vgmfile.vgz\n");
 		return 0;
 	}
-	
+	VGMEndFlag = false;
+
 	printf("Loading VGM ...\n");
 	hFile = gzopen(argv[1], "rb");
 	if (hFile == NULL)
@@ -401,6 +416,8 @@ static void ProcessVGM(UINT32 smplCount, UINT32 smplOfs)
 	return;
 }
 
+static INT frameCount = 0;
+
 static UINT32 FillBuffer(void* drvStruct, void* userParam, UINT32 bufSize, void* data)
 {
 	UINT32 smplCount;
@@ -446,9 +463,24 @@ static UINT32 FillBuffer(void* drvStruct, void* userParam, UINT32 bufSize, void*
 		// register dump
 		{
 			//SendChipCommand_Data8(0x00, chipID, SN76496_W_REG, data[0x01]);
-			VGM_CHIPDEV* cDev = &VGMChips[0][0];
-			SN76489_Context* chip = cDev->defInf.dataPtr;
+			//VGM_CHIPDEV* cDev = &VGMChips[0][0];
+			//SN76489_Context* chip = cDev->defInf.dataPtr;
+			for (int iI = 0; iI < 4; iI++) {
+				int index = iI << 1;
+				WriteRecord(iI, Register[index], Register[index + 1], frameCount);
+#if 0
+				if (Register[iI+1] != 0x0f) {
+					printf("[%4x:%2d] ", Register[iI], Register[iI + 1]);
+				}
+				else
+				{
+					printf("[----:%2d] ", Register[iI + 1]);
+				}
+#endif
+			}
+			//printf("\r");
 		}
+		frameCount++;
 		// register dump
 	}
 	
@@ -963,6 +995,23 @@ static void SendChipCommand_Data8(UINT8 chipID, UINT8 chipNum, UINT8 ofs, UINT8 
 	
 	cDev->write8(cDev->defInf.dataPtr, ofs, data);
 
+	if (data & 0x80)
+	{
+		LatchedRegister = (data >> 4) & 0x07;
+		Register[LatchedRegister] = (Register[LatchedRegister] & 0x3f0) /* zero low 4 bits */
+			| (data & 0xf);                            /* and replace with data */
+	}
+	else {
+		if (!(LatchedRegister % 2) && (LatchedRegister < 5))
+		{
+				Register[LatchedRegister] = (Register[LatchedRegister] & 0x00f) /* zero high 6 bits */
+				| ((data & 0x3f) << 4);                 /* and replace with data */
+		}
+		else {
+			Register[LatchedRegister] = (data & 0x0f);                 /* and replace with data */
+		}
+	}
+
 	//printf("SendData8 [%4x:%4x]\n", ofs, data);
 	return;
 }
@@ -1274,6 +1323,7 @@ static UINT32 DoVgmCommand(UINT8 cmd, const UINT8* data)
 		return 0x01;
 	case 0x66:
 		printf("VGM end.\n");
+		VGMEndFlag = true;
 		return 0x00;	// terminate
 	case 0x67:
 		{
