@@ -467,18 +467,18 @@ static UINT32 FillBuffer(void* drvStruct, void* userParam, UINT32 bufSize, void*
 			//SN76489_Context* chip = cDev->defInf.dataPtr;
 			for (int iI = 0; iI < 4; iI++) {
 				int index = iI << 1;
-				WriteRecord(iI, Register[index], Register[index + 1], frameCount);
-#if 0
-				if (Register[iI+1] != 0x0f) {
-					printf("[%4x:%2d] ", Register[iI], Register[iI + 1]);
+				//WriteRecord(iI, Register[index], Register[index + 1], frameCount);
+#if 1
+				if (Register[index +1] != 0x0f) {
+					printf("[%d::%4x:%2x] ", iI, Register[index], Register[index + 1]);
 				}
 				else
 				{
-					printf("[----:%2d] ", Register[iI + 1]);
+					printf("[%d::----:--] ",iI);
 				}
 #endif
 			}
-			//printf("\r");
+			printf("\r");
 		}
 		frameCount++;
 		// register dump
