@@ -19,9 +19,10 @@ static int PsgFNum[] = {
     0x06b, 0x065, 0x05f, 0x05a, 0x055, 0x050, 0x04c, 0x047, 0x043, 0x040, 0x03c, 0x039, // 4
     0x035, 0x032, 0x030, 0x02d, 0x02a, 0x028, 0x026, 0x024, 0x022, 0x020, 0x01e, 0x01c, // 5
     0x01b, 0x019, 0x018, 0x016, 0x015, 0x014, 0x013, 0x012, 0x011, 0x010, 0x00f, 0x00e, // 6
-    0x00d, 0x00d, 0x00c, 0x00b, 0x00b, 0x00a, 0x009, 0x008, 0x007, 0x006, 0x005, 0x004  // 7
+    0x00d, 0x00d, 0x00c, 0x00b, 0x00b, 0x00a, 0x009, 0x008, 0x007, 0x006, 0x005, 0x004, // 7
+    0x00,
 };
-
+static int fnumsize = sizeof(PsgFNum) / sizeof(int);
 
 void ResetRecord(){
     for(int iI = 0; iI < CH_MAX;++iI){
@@ -34,17 +35,17 @@ void ResetRecord(){
 
 int CalcNote(int freq)
 {
-    int m = 0x7fffffff;
     int n = 0;
+    int calcfreq = freq;
 
-    for (int i = 0; i < 12 * 8; i++)
+    for (int iI = 0; iI < fnumsize; iI++)
     {
-        int a = freq - PsgFNum[i];
-
-        if (m > a)
+        int max = PsgFNum[iI];
+        int min = PsgFNum[iI+1];
+        if ((calcfreq >= min) && (calcfreq < max))
         {
-            m = a;
-            n = i;
+            n = iI;
+            break;
         }
     }
     return n;
@@ -53,16 +54,12 @@ int CalcNote(int freq)
 void WriteRecord(int chan, unsigned short freq, unsigned short vol, int frameCount)
 {
     bool addflag = false;
-    int note = (int)freq;
-    if (chan < 4) {
-        //note = CalcNote((int)freq);
-    }
     if (RecordTable[chan].empty()) {
         addflag = true;
     }
     else {
         RecordData* oldrecord = RecordTable[chan][RecordTable[chan].size() - 1];
-        if (note != oldrecord->note) {
+        if (freq != oldrecord->freq) {
             oldrecord->time = frameCount - oldrecord->time;
             addflag = true;
         }
@@ -75,7 +72,11 @@ void WriteRecord(int chan, unsigned short freq, unsigned short vol, int frameCou
         RecordData* record = (RecordData*)malloc(sizeof(RecordData));
         if (record != NULL)
         {
-            record->note = note;
+            record->freq = freq;
+            record->note = 0;
+            if (chan < 3 && freq != 0) {
+                record->note = CalcNote((int)freq);
+            }
             record->vol = vol;
             record->time = frameCount;
             RecordTable[chan].push_back(record);
@@ -83,3 +84,45 @@ void WriteRecord(int chan, unsigned short freq, unsigned short vol, int frameCou
     }
 }
 
+#define WBUFF_SIZE   (1024)
+char wbuf[WBUFF_SIZE];
+char* note_str[] = {
+    "C", "C+",
+    "D", "D+",
+    "E",
+    "F", "F+",
+    "G", "G+",
+    "A", "A+",
+    "B",
+};
+void DumpRecord(char* filename)
+{
+    FILE* fp = fopen(filename, "wt+");
+    int wsize;
+    if (fp != NULL) {
+        for (int iI = 0; iI < CH_MAX; ++iI) {
+            wsize = sprintf_s(wbuf, WBUFF_SIZE, ";Channel %d Start -----\n", iI);
+            fwrite(wbuf, wsize, 1, fp);
+            for (RecordData* record : RecordTable[iI]) {
+                if (iI < (CH_MAX - 1))
+                {
+                    if (record->freq == 0) {
+                        wsize = sprintf_s(wbuf, WBUFF_SIZE, "---- V%d %d\n", record->vol, record->time);
+                    }
+                    else {
+                        int o = record->note / 12;
+                        int n = record->note % 12;
+                        wsize = sprintf_s(wbuf, WBUFF_SIZE, "o%d %s V%d %d\n", o, note_str[n], record->vol, record->time);
+                    }
+                }
+                else {
+                    wsize = sprintf_s(wbuf, WBUFF_SIZE, " freq 0x%04x V%d %d\n", record->freq, record->vol, record->time);
+                }
+                fwrite(wbuf, wsize, 1, fp);
+            }
+            wsize = sprintf_s(wbuf, WBUFF_SIZE, ";Channel %d End -----\n", iI);
+            fwrite(wbuf, wsize, 1, fp);
+        }
+        fclose(fp);
+    }
+}

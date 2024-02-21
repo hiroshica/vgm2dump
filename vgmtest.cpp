@@ -366,6 +366,7 @@ int main(int argc, char* argv[])
 	if (audDrvLog != NULL)
 		retVal = AudioDrv_Stop(audDrvLog);
 	free(smplData);	smplData = NULL;
+	DumpRecord("test.dump");
 	ResetRecord();
 	
 Exit_SndDrvDeinit:
