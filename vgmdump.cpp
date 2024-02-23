@@ -240,6 +240,8 @@ char dumpfile[2048] = "test.dump";
 static PlayerA mainPlr;
 static volatile UINT8 playState;
 static UINT8 logLevel = DEVLOG_INFO;
+double BPM;
+double Frame;
 double FileTime;
 
 static UINT8 FilePlayCallback(PlayerBase* player, void* userParam, UINT8 evtType, void* evtParam)
@@ -300,6 +302,7 @@ static void PlayerLogCallback(void* userParam, PlayerBase* player, UINT8 level, 
 	return;
 }
 
+// Title 11è¨êﬂ * 4
 UINT8 TestMain()
 {
 	UINT8 retVal;
@@ -347,8 +350,11 @@ UINT8 TestMain()
 	{
 		VGMPlayer* vgmplay = dynamic_cast<VGMPlayer*>(player);
 		const VGM_HEADER* vgmhdr = vgmplay->GetFileHeader();
+		// éÆ  BPM = (è¨êﬂ*4) * (60s / fileïbêî)
 		FileTime = player->Tick2Second(player->GetTotalTicks()), player->Tick2Second(player->GetLoopTicks());
-		printf("VGM v%3X, Total Length: %.2fs", vgmhdr->fileVer, FileTime);
+		Frame = 11;
+		BPM = (Frame * 4) * (60 / FileTime);
+		printf("VGM v%3X, Total Length: %.2fs :BPM: %.2f", vgmhdr->fileVer, FileTime,BPM);
 	}
 	mainPlr.Stop();
 	mainPlr.UnloadFile();
@@ -357,8 +363,6 @@ UINT8 TestMain()
 	mainPlr.UnregisterAllPlayers();
 }
 // TestMain--------------------------------------------------
-// Title 11è¨êﬂ * 4
-// éÆ 
 
 
 int main(int argc, char* argv[])
