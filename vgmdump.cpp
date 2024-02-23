@@ -51,11 +51,25 @@ int __cdecl _getch(void);	// from conio.h
 #include "emu/cores/es5503.h"
 #include "emu/cores/es5506.h"
 
+// TestMain--------------------------------------------------
+#include "utils/DataLoader.h"
+#include "utils/FileLoader.h"
+#include "player/playerbase.hpp"
+#include "player/vgmplayer.hpp"
+#include "player/playera.hpp"
+#include "audio/AudioStream.h"
+#include "audio/AudioStream_SpcDrvFuns.h"
+#include "emu/Resampler.h"
+#include "emu/SoundDevs.h"	// for DEVID_*
+#include "emu/EmuCores.h"
+#include "utils/OSMutex.h"
+// TestMain--------------------------------------------------
+
+
 #include "player/dblk_compr.h"
 #include "Record.h"
 
-
-typedef struct _vgm_file_header
+typedef struct _lp_vgm_file_header
 {
 	UINT32 fccVGM;
 	UINT32 lngEOFOffset;
@@ -128,7 +142,8 @@ typedef struct _vgm_file_header
 	UINT32 lngHzX1_010;
 	UINT32 lngHzC352;
 	UINT32 lngHzGA20;
-} VGM_HEADER;
+} lpVGM_HEADER;
+
 typedef struct _vgm_linked_chip_device VGM_LINKCDEV;
 struct _vgm_linked_chip_device
 {
@@ -201,7 +216,7 @@ static volatile bool canRender;
 static UINT32 VGMLen;
 static UINT8* VGMData;
 static UINT32 VGMPos;
-static VGM_HEADER VGMHdr;
+static lpVGM_HEADER VGMHdr;
 static UINT32 VGMSmplPos;
 static UINT32 renderSmplPos;
 #define CHIP_COUNT	0x29
@@ -209,6 +224,9 @@ static VGM_CHIPDEV VGMChips[CHIP_COUNT][2];
 #define DACSTRM_COUNT	0x10	// only 0x10 for now
 static VGM_DACSTRM DACStreams[DACSTRM_COUNT];
 static UINT32 sampleRate;
+static UINT32 maxLoops = 1;
+static UINT32 masterVol = 0x10000;	// fixed point 16.16
+
 
 #define PCM_BANK_COUNT	0x40
 VGM_PCM_BANK PCMBank[PCM_BANK_COUNT];
@@ -217,6 +235,131 @@ UINT32 ym2612_pcmBnkPos;
 
 char vgmfile[2048];
 char dumpfile[2048] = "test.dump";
+
+// TestMain--------------------------------------------------
+static PlayerA mainPlr;
+static volatile UINT8 playState;
+static UINT8 logLevel = DEVLOG_INFO;
+double FileTime;
+
+static UINT8 FilePlayCallback(PlayerBase* player, void* userParam, UINT8 evtType, void* evtParam)
+{
+	switch (evtType)
+	{
+	case PLREVT_START:
+		//printf("Playback started.\n");
+		break;
+	case PLREVT_STOP:
+		//printf("Playback stopped.\n");
+		break;
+	case PLREVT_LOOP:
+	{
+		UINT32* curLoop = (UINT32*)evtParam;
+		if (player->GetState() & PLAYSTATE_SEEK)
+			break;
+		printf("Loop %u.\n", 1 + *curLoop);
+	}
+	break;
+	case PLREVT_END:
+		if (playState & PLAYSTATE_END)
+			break;
+		playState |= PLAYSTATE_END;
+		printf("Song End.\n");
+		break;
+	}
+	return 0x00;
+}
+
+static DATA_LOADER* RequestFileCallback(void* userParam, PlayerBase* player, const char* fileName)
+{
+	DATA_LOADER* dLoad = FileLoader_Init(fileName);
+	UINT8 retVal = DataLoader_Load(dLoad);
+	if (!retVal)
+		return dLoad;
+	DataLoader_Deinit(dLoad);
+	return NULL;
+}
+
+static const char* LogLevel2Str(UINT8 level)
+{
+	static const char* LVL_NAMES[6] = { " ??? ", "Error", "Warn ", "Info ", "Debug", "Trace" };
+	if (level >= (sizeof(LVL_NAMES) / sizeof(LVL_NAMES[0])))
+		level = 0;
+	return LVL_NAMES[level];
+}
+
+static void PlayerLogCallback(void* userParam, PlayerBase* player, UINT8 level, UINT8 srcType,
+	const char* srcTag, const char* message)
+{
+	if (level > logLevel)
+		return;	// don't print messages with higher verbosity than current log level
+	if (srcType == PLRLOGSRC_PLR)
+		printf("[%s] %s: %s", LogLevel2Str(level), player->GetPlayerName(), message);
+	else
+		printf("[%s] %s %s: %s", LogLevel2Str(level), player->GetPlayerName(), srcTag, message);
+	return;
+}
+
+UINT8 TestMain()
+{
+	UINT8 retVal;
+	playState = 0x00;
+	mainPlr.RegisterPlayerEngine(new VGMPlayer);
+	mainPlr.SetEventCallback(FilePlayCallback, NULL);
+	mainPlr.SetFileReqCallback(RequestFileCallback, NULL);
+	mainPlr.SetLogCallback(PlayerLogCallback, NULL);
+	{
+		PlayerA::Config pCfg = mainPlr.GetConfiguration();
+		pCfg.masterVol = masterVol;
+		pCfg.loopCount = maxLoops;
+		pCfg.fadeSmpls = sampleRate * 4;	// fade over 4 seconds
+		pCfg.endSilenceSmpls = sampleRate / 2;	// 0.5 seconds of silence at the end
+		pCfg.pbSpeed = 1.0;
+		mainPlr.SetConfiguration(pCfg);
+	}
+	DATA_LOADER* dLoad;
+
+	dLoad = FileLoader_Init(vgmfile);
+	if (dLoad == NULL)
+	{
+		printf("Error TestMaion.\n");
+		return 1;
+	}
+	DataLoader_SetPreloadBytes(dLoad, 0x100);
+	retVal = DataLoader_Load(dLoad);
+	if (retVal)
+	{
+		DataLoader_Deinit(dLoad);
+		fprintf(stderr, "Error 0x%02X loading file!\n", retVal);
+		return 1;
+	}
+	retVal = mainPlr.LoadFile(dLoad);
+	if (retVal)
+	{
+		DataLoader_Deinit(dLoad);
+		fprintf(stderr, "Error 0x%02X loading file!\n", retVal);
+		return 1;
+	}
+
+	PlayerBase* player = mainPlr.GetPlayer();
+	mainPlr.SetLoopCount(maxLoops);
+	if (player->GetPlayerType() == FCC_VGM)
+	{
+		VGMPlayer* vgmplay = dynamic_cast<VGMPlayer*>(player);
+		const VGM_HEADER* vgmhdr = vgmplay->GetFileHeader();
+		FileTime = player->Tick2Second(player->GetTotalTicks()), player->Tick2Second(player->GetLoopTicks());
+		printf("VGM v%3X, Total Length: %.2fs", vgmhdr->fileVer, FileTime);
+	}
+	mainPlr.Stop();
+	mainPlr.UnloadFile();
+	DataLoader_Deinit(dLoad);	dLoad = NULL;
+
+	mainPlr.UnregisterAllPlayers();
+}
+// TestMain--------------------------------------------------
+// Title 11è¨êﬂ * 4
+// éÆ 
+
 
 int main(int argc, char* argv[])
 {
@@ -230,6 +373,10 @@ int main(int argc, char* argv[])
 	AUDIO_OPTS* opts;
 	const AUDIO_DEV_LIST *devList;
 	UINT32 tempData[2];
+
+#ifdef _WIN32
+	SetConsoleOutputCP(65001);	// set UTF-8 codepage
+#endif
 
 	if (argc < 2)
 	{
@@ -249,7 +396,11 @@ int main(int argc, char* argv[])
 		}
 	}
 
+	sampleRate = 44100;
 	VGMEndFlag = false;
+	//-------------------------------------------
+	TestMain();
+	//-------------------------------------------
 
 	printf("Loading VGM ...\n");
 	hFile = gzopen(vgmfile, "rb");
@@ -277,9 +428,9 @@ int main(int argc, char* argv[])
 		tempData[1] += (tempData[1] == 0x00) ? 0x00 : 0xBC;
 		if (tempData[1] && tempData[0] > tempData[1])
 			tempData[0] = tempData[1];	// the main header ends where the extra header begins
-		if (tempData[0] > sizeof(VGM_HEADER))
-			tempData[0] = sizeof(VGM_HEADER);	// don't copy too many bytes into VGM_HEADER struct
-		memset(&VGMHdr, 0x00, sizeof(VGM_HEADER));
+		if (tempData[0] > sizeof(lpVGM_HEADER))
+			tempData[0] = sizeof(lpVGM_HEADER);	// don't copy too many bytes into VGM_HEADER struct
+		memset(&VGMHdr, 0x00, sizeof(lpVGM_HEADER));
 		memcpy(&VGMHdr, &VGMData[0x00], tempData[0]);
 	}
 	gzclose(hFile);
@@ -288,7 +439,6 @@ int main(int argc, char* argv[])
 		printf("Error reading file!\n");
 		return 2;
 	}
-	
 	printf("Opening Audio Device ...\n");
 	Audio_Init();
 	drvCount = Audio_GetDriverCount();
@@ -313,8 +463,6 @@ int main(int argc, char* argv[])
 		SetupDirectSound(audDrv);
 #endif
 	devList = AudioDrv_GetDeviceList(audDrv);
-	
-	sampleRate = 44100;
 	
 	opts = AudioDrv_GetOptions(audDrv);
 	//opts->sampleRate = 96000;
