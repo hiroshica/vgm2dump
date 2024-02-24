@@ -379,7 +379,7 @@ int main(int argc, char* argv[])
 	UINT32 tempData[2];
 
 #ifdef _WIN32
-	SetConsoleOutputCP(65001);	// set UTF-8 codepage
+	//SetConsoleOutputCP(65001);	// set UTF-8 codepage
 #endif
 
 	if (argc < 2)
@@ -404,6 +404,7 @@ int main(int argc, char* argv[])
 	VGMEndFlag = false;
 	//-------------------------------------------
 	TestMain();
+	StartRecord((44100.0*60) / (BPM / 4.0));
 	//-------------------------------------------
 
 	printf("Loading VGM ...\n");

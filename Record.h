@@ -9,6 +9,7 @@ typedef struct recorddata{
     int    elaptime;
 } RecordData;
 
+void StartRecord(double basespeed);
 void ResetRecord();
 void WriteRecord(int chan, unsigned short freq, unsigned short vol, int frameCount);
 void DumpRecord(char* filename);

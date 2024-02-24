@@ -5,11 +5,15 @@
 #include <ctype.h>
 #include <vector>
 #include <string>
+#include <memory>
+#include <cmath>
 
 #include "Record.h"
 
 #define CH_MAX (4)
-std::vector<RecordData *> RecordTable[CH_MAX];
+typedef std::shared_ptr<RecordData> RecordDataP;
+std::vector<RecordDataP> RecordTable[CH_MAX];
+double BaseSpeed;
 
 static int PsgFNum[] = {
     0x6ae, 0x64e, 0x5f4, 0x59e, 0x54e, 0x502, 0x4ba, 0x476, 0x436, 0x3f8, 0x3c0, 0x38a, // 0
@@ -24,11 +28,17 @@ static int PsgFNum[] = {
 };
 static int fnumsize = sizeof(PsgFNum) / sizeof(int);
 
+void StartRecord(double basespeed)
+{
+    BaseSpeed = ceil(basespeed);
+}
 void ResetRecord(){
     for(int iI = 0; iI < CH_MAX;++iI){
+#if false
         for(RecordData *record:RecordTable[iI]){
             free(record);
         }
+#endif
         RecordTable[iI].clear();
     }
 }
@@ -50,7 +60,7 @@ int CalcNote(int freq)
     }
     return n;
 }
-void callback()
+void debugcallback()
 {
 
 }
@@ -58,14 +68,14 @@ void callback()
 void WriteRecord(int chan, unsigned short freq, unsigned short vol, int frameCount)
 {
     if (chan == 0) {
-        callback();
+        debugcallback();
     }
     bool addflag = false;
     if (RecordTable[chan].empty()) {
         addflag = true;
     }
     else {
-        RecordData* oldrecord = RecordTable[chan][RecordTable[chan].size() - 1];
+        RecordDataP oldrecord = RecordTable[chan][RecordTable[chan].size() - 1];
         if(vol == 0x0f)
         {
             // mute data
@@ -91,7 +101,8 @@ void WriteRecord(int chan, unsigned short freq, unsigned short vol, int frameCou
         }
     }
     if (addflag) {
-        RecordData* record = (RecordData*)malloc(sizeof(RecordData));
+        //RecordData* record = (RecordData*)malloc(sizeof(RecordData));
+        std::shared_ptr<RecordData> record(new RecordData());
         if (record != NULL)
         {
             record->freq = freq;
@@ -127,8 +138,8 @@ void DumpRecord(char* filename)
         for (int iI = 0; iI < CH_MAX; ++iI) {
             wsize = sprintf_s(wbuf, WBUFF_SIZE, ";Channel %d Start -----", iI);
             fwrite(wbuf, wsize, 1, fp);
-            RecordData* oldrecord = NULL;
-            for (RecordData* record : RecordTable[iI]) {
+            RecordDataP oldrecord = NULL;
+            for (RecordDataP record : RecordTable[iI]) {
                 int time = record->elaptime - record->starttime;
                 if (iI < (CH_MAX - 1))
                 {
