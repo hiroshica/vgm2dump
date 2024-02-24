@@ -1,10 +1,11 @@
 
 #include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
+//#include <stdio.h>
+//#include <string.h>
+//#include <ctype.h>
 #include <vector>
 #include <string>
+#include <format>
 #include <memory>
 #include <cmath>
 
@@ -118,10 +119,10 @@ void WriteRecord(int chan, unsigned short freq, unsigned short vol, int frameCou
     }
 }
 
-#define WBUFF_SIZE   (1024)
-char wbuf_tmp[WBUFF_SIZE];
-char wbuf[WBUFF_SIZE];
-char* note_str[] = {
+//#define WBUFF_SIZE   (1024)
+//char wbuf_tmp[WBUFF_SIZE];
+//char wbuf[WBUFF_SIZE];
+const char* note_str[] = {
     "C", "C+",
     "D", "D+",
     "E",
@@ -136,53 +137,57 @@ void DumpRecord(char* filename)
     int wsize;
     if (fp != NULL) {
         for (int iI = 0; iI < CH_MAX; ++iI) {
-            wsize = sprintf_s(wbuf, WBUFF_SIZE, ";Channel %d Start -----", iI);
-            fwrite(wbuf, wsize, 1, fp);
+            std::string outstr;
+            std::string str;
+            str = std::format(";Channel {} Start -----", iI);
+            outstr = str;
             RecordDataP oldrecord = NULL;
             for (RecordDataP record : RecordTable[iI]) {
                 int time = record->elaptime - record->starttime;
+                str.clear();
                 if (iI < (CH_MAX - 1))
                 {
                     // tone channel
-                    sprintf_s(wbuf_tmp, WBUFF_SIZE, " ");
+                    str = " ";
                     if (record->vol == 0x0f) {
                         //if(!((oldrecord != NULL) && (oldrecord->vol != record->vol)))
                         {
-                            sprintf_s(wbuf_tmp, WBUFF_SIZE, "REST ");
+                            str += "REST ";
                         }
                     }
                     else if (record->freq == 0) {
-                        sprintf_s(wbuf_tmp, WBUFF_SIZE, "---- ");
+                        str += "---- ";
                     }
                     else if((oldrecord != NULL) && (oldrecord->note != record->note))
                     {
                         int o = record->note / 12;
                         int n = record->note % 12;
-                        sprintf_s(wbuf_tmp, WBUFF_SIZE, "o%d %s ", o, note_str[n]);
+                        str +=std::format("o{} {} ", o, note_str[n]);
                     }
 
                     if (oldrecord == NULL) {
-                        wsize = sprintf_s(wbuf, WBUFF_SIZE, "\n%s[V%d:%d]", wbuf_tmp, record->vol, time);
+                        outstr += std::format("\n{}[V{}:{}]", str, record->vol, time);
                     }
                     else if (oldrecord->note == record->note)
                     {
-                        wsize = sprintf_s(wbuf, WBUFF_SIZE, "%s[V%d:%d] ", wbuf_tmp, record->vol, time);
+                        outstr += std::format("{}[V{}:{}] ", str, record->vol, time);
                     }
                     else
                     {
-                        wsize = sprintf_s(wbuf, WBUFF_SIZE, "\n%s[V%d:%d] ", wbuf_tmp, record->vol, time);
+                        outstr += std::format("\n{}[V{}:{}] ", str, record->vol, time);
                     }
                     oldrecord = record;
                     // tone channel
                 }
                 else {
                     // noise channel
-                    wsize = sprintf_s(wbuf, WBUFF_SIZE, " freq 0x%04x V%d %d\n", record->freq, record->vol, time);
+                    outstr += std::format(" freq 0x{} V{} {}\n", record->freq, record->vol, time);
                 }
-                fwrite(wbuf, wsize, 1, fp);
+                fwrite(outstr.c_str(), outstr.size(), 1, fp);
+                outstr.clear();
             }
-            wsize = sprintf_s(wbuf, WBUFF_SIZE, "\n;Channel %d End -----\n", iI);
-            fwrite(wbuf, wsize, 1, fp);
+            outstr = std::format("\n;Channel {} End -----\n", iI);
+            fwrite(outstr.c_str(), outstr.size(), 1, fp);
         }
         fclose(fp);
     }
