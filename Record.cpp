@@ -181,7 +181,7 @@ void DumpRecord(char* filename)
                 }
                 else {
                     // noise channel
-                    outstr += std::format(" freq 0x{} V{} {}\n", record->freq, record->vol, time);
+                    outstr += std::format(" freq 0x{:#x} V{} {}\n", record->freq, record->vol, time);
                 }
                 fwrite(outstr.c_str(), outstr.size(), 1, fp);
                 outstr.clear();
