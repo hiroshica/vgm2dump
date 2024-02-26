@@ -1,11 +1,6 @@
 
 #include "./Record.h"
 
-#define CH_MAX (4)
-typedef std::shared_ptr<RecordData> RecordDataP;
-std::vector<RecordDataP> RecordTable[CH_MAX];
-double BaseSpeed;
-
 static int PsgFNum[] = {
     0x6ae,
     0x64e,
@@ -105,23 +100,38 @@ static int PsgFNum[] = {
     0x004, // 7
     0x00,
 };
-static int fnumsize = sizeof(PsgFNum) / sizeof(int);
+const char* note_str[] = {
+    "c",
+    "c+",
+    "d",
+    "d+",
+    "e",
+    "f",
+    "f+",
+    "g",
+    "g+",
+    "a",
+    "a+",
+    "b",
+};
 
-void StartRecord(double basespeed)
+#define CH_MAX (4)
+typedef std::shared_ptr<RecordData> RecordDataP;
+std::vector<RecordDataP> RecordTable[CH_MAX];
+double BaseSpeed;
+int SpeedDiv;
+int BaseFrame;
+
+static int fnumsize = sizeof(PsgFNum) / sizeof(int);
+// #define WBUFF_SIZE   (1024)
+// char wbuf_tmp[WBUFF_SIZE];
+// char wbuf[WBUFF_SIZE];
+
+// 70460
+int CalcTime(int inframe)
 {
-    BaseSpeed = ceil(basespeed);
-}
-void ResetRecord()
-{
-    for (int iI = 0; iI < CH_MAX; ++iI)
-    {
-#if false
-        for(RecordData *record:RecordTable[iI]){
-            free(record);
-        }
-#endif
-        RecordTable[iI].clear();
-    }
+    int retcode = inframe / BaseFrame;
+    return retcode;
 }
 
 int CalcNote(int freq)
@@ -141,6 +151,36 @@ int CalcNote(int freq)
     }
     return n;
 }
+//------------------------------------------------------------------------------------
+// 
+//------------------------------------------------------------------------------------
+void StartRecord(double basespeed,int inframe)
+{
+    BaseSpeed = ceil(basespeed);
+    int base = BaseSpeed;
+    for (int iI = 0; iI < 383; ++iI) {
+        if ((base >> (iI + 1)) == 0) {
+            SpeedDiv = iI;
+            break;
+}
+    }
+    BaseFrame = inframe;
+    //int testnum = 1 << SpeedDiv;
+    //printf("speed = %d\n", testnum);
+}
+void ResetRecord()
+{
+    for (int iI = 0; iI < CH_MAX; ++iI)
+    {
+#if false
+        for (RecordData* record : RecordTable[iI]) {
+            free(record);
+        }
+#endif
+        RecordTable[iI].clear();
+    }
+}
+
 void debugcallback()
 {
 }
@@ -208,23 +248,6 @@ void WriteRecord(int chan, unsigned short freq, unsigned short vol, int frameCou
     }
 }
 
-// #define WBUFF_SIZE   (1024)
-// char wbuf_tmp[WBUFF_SIZE];
-// char wbuf[WBUFF_SIZE];
-const char *note_str[] = {
-    "C",
-    "C+",
-    "D",
-    "D+",
-    "E",
-    "F",
-    "F+",
-    "G",
-    "G+",
-    "A",
-    "A+",
-    "B",
-};
 void DumpRecord(char *filename)
 {
     FILE *fp = fopen(filename, "wt+");
@@ -274,8 +297,12 @@ void DumpRecord(char *filename)
             }
             // channel データ収集OK
             str += std::format(";Channel {} Start -----\n", iI);
+            int calctime = 0;
             for (NoteValueP record : NoteValues)
             {
+                int totaltime = CalcTime(record->totaltime);
+                calctime += record->totaltime;
+#if 0
                 if (record->note == 0)
                 {
                     str += std::format(" REST [V{}:{}]\t\t;\n", record->vol[0], record->totaltime);
@@ -287,15 +314,35 @@ void DumpRecord(char *filename)
                         str += std::format(" o{} ", o);
                         old_oct = o;
                     }
-                    str += std::format(" {} [V{}:{}]\t\t; ", note_str[n], record->vol[0], record->totaltime);
+                    int totaltime = calcTime(record->totaltime);
+                    str += std::format(" V{} {} [:{}]\t\t; ", record->vol[0],note_str[n], totaltime);
                     for (int iJ = 0; iJ < record->time.size(); ++iJ)
                     {
                         str += std::format("[V{}:{}] ", record->vol[iJ], record->time[iJ]);
                     }
                     str += "\n";
                 }
+#else
+                if (record->note == 0)
+                {
+                    str += std::format(" r:{}", totaltime);
+                }
+                else {
+                    int o = record->note / 12;
+                    int n = record->note % 12;
+                    if (old_oct != o) {
+                        str += std::format(" o{}", o);
+                        old_oct = o;
+                    }
+                    str += std::format(" V{}{}:{}", record->vol[0], note_str[n], totaltime);
+                }
+                if (calctime >= BaseSpeed) {
+                    str += "\n";
+                    calctime = 0;
+                }
+#endif
             }
-            str += std::format(";Channel {} End -----\n", iI);
+            str += std::format("\n;Channel {} End -----\n", iI);
             fwrite(str.c_str(), str.size(), 1, fp);
         }
 

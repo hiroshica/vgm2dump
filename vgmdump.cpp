@@ -404,7 +404,7 @@ int main(int argc, char* argv[])
 	VGMEndFlag = false;
 	//-------------------------------------------
 	TestMain();
-	StartRecord((44100.0*60) / (BPM / 4.0));
+	StartRecord((44100.0*60) / (BPM / 4.0), (int)sampleRate/60);
 	//-------------------------------------------
 
 	printf("Loading VGM ...\n");

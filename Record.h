@@ -29,7 +29,7 @@ typedef struct recorddata{
     int    elaptime;
 } RecordData;
 
-void StartRecord(double basespeed);
+void StartRecord(double basespeed, int inframe);
 void ResetRecord();
 void WriteRecord(int chan, unsigned short freq, unsigned short vol, int frameCount);
 void DumpRecord(char* filename);
