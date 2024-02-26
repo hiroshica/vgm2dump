@@ -15,11 +15,19 @@ typedef struct _NoteValue
 {
     int                        note;
     int                        totaltime;
+    int                        voiceno;
     std::vector<int>           time;
     std::vector<unsigned short> vol;
 } NoteValue;
-
 typedef std::shared_ptr<NoteValue> NoteValueP;
+
+typedef struct _VoiceValue
+{
+    std::vector<int>           time;
+    std::vector<unsigned short> vol;
+} VoiceValue;
+typedef std::shared_ptr<VoiceValue> VoiceValueP;
+
 
 typedef struct recorddata{
     int    note;
@@ -28,6 +36,7 @@ typedef struct recorddata{
     int    starttime;
     int    elaptime;
 } RecordData;
+typedef std::shared_ptr<RecordData> RecordDataP;
 
 void StartRecord(double basespeed, int inframe);
 void ResetRecord();

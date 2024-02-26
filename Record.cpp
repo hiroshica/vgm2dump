@@ -2,130 +2,42 @@
 #include "./Record.h"
 
 static int PsgFNum[] = {
-    0x6ae,
-    0x64e,
-    0x5f4,
-    0x59e,
-    0x54e,
-    0x502,
-    0x4ba,
-    0x476,
-    0x436,
-    0x3f8,
-    0x3c0,
-    0x38a, // 0
-    0x357,
-    0x327,
-    0x2fa,
-    0x2cf,
-    0x2a7,
-    0x281,
-    0x25d,
-    0x23b,
-    0x21b,
-    0x1fc,
-    0x1e0,
-    0x1c5, // 1
-    0x1ac,
-    0x194,
-    0x17d,
-    0x168,
-    0x153,
-    0x140,
-    0x12e,
-    0x11d,
-    0x10d,
-    0x0fe,
-    0x0f0,
-    0x0e3, // 2
-    0x0d6,
-    0x0ca,
-    0x0be,
-    0x0b4,
-    0x0aa,
-    0x0a0,
-    0x097,
-    0x08f,
-    0x087,
-    0x07f,
-    0x078,
-    0x071, // 3
-    0x06b,
-    0x065,
-    0x05f,
-    0x05a,
-    0x055,
-    0x050,
-    0x04c,
-    0x047,
-    0x043,
-    0x040,
-    0x03c,
-    0x039, // 4
-    0x035,
-    0x032,
-    0x030,
-    0x02d,
-    0x02a,
-    0x028,
-    0x026,
-    0x024,
-    0x022,
-    0x020,
-    0x01e,
-    0x01c, // 5
-    0x01b,
-    0x019,
-    0x018,
-    0x016,
-    0x015,
-    0x014,
-    0x013,
-    0x012,
-    0x011,
-    0x010,
-    0x00f,
-    0x00e, // 6
-    0x00d,
-    0x00d,
-    0x00c,
-    0x00b,
-    0x00b,
-    0x00a,
-    0x009,
-    0x008,
-    0x007,
-    0x006,
-    0x005,
-    0x004, // 7
-    0x00,
+            0x6ae,0x64e,0x5f4,0x59e,0x54e,0x502,0x4ba,0x476,0x436,0x3f8,0x3c0,0x38a, // 0
+            0x357,0x327,0x2fa,0x2cf,0x2a7,0x281,0x25d,0x23b,0x21b,0x1fc,0x1e0,0x1c5, // 1
+            0x1ac,0x194,0x17d,0x168,0x153,0x140,0x12e,0x11d,0x10d,0x0fe,0x0f0,0x0e3, // 2
+            0x0d6,0x0ca,0x0be,0x0b4,0x0aa,0x0a0,0x097,0x08f,0x087,0x07f,0x078,0x071, // 3
+            0x06b,0x065,0x05f,0x05a,0x055,0x050,0x04c,0x047,0x043,0x040,0x03c,0x039, // 4
+            0x035,0x032,0x030,0x02d,0x02a,0x028,0x026,0x024,0x022,0x020,0x01e,0x01c, // 5
+            0x01b,0x019,0x018,0x016,0x015,0x014,0x013,0x012,0x011,0x010,0x00f,0x00e, // 6
+            0x00d,0x00d,0x00c,0x00b,0x00b,0x00a,0x009,0x008,0x007,0x006,0x005,0x004  // 7
 };
+static int fnumsize = sizeof(PsgFNum) / sizeof(int);
+
 const char* note_str[] = {
-    "c",
-    "c+",
-    "d",
-    "d+",
+    "c", "c+",
+    "d", "d+",
     "e",
-    "f",
-    "f+",
-    "g",
-    "g+",
-    "a",
-    "a+",
+    "f", "f+",
+    "g", "g+",
+    "a", "a+",
     "b",
+};
+const char* Chan_str[] =
+{
+    "G",
+    "H",
+    "I",
+    "K"
 };
 
 #define CH_MAX (4)
-typedef std::shared_ptr<RecordData> RecordDataP;
 std::vector<RecordDataP> RecordTable[CH_MAX];
 double BaseSpeed;
-int SpeedDiv;
 int BaseFrame;
 
-static int fnumsize = sizeof(PsgFNum) / sizeof(int);
-// #define WBUFF_SIZE   (1024)
-// char wbuf_tmp[WBUFF_SIZE];
-// char wbuf[WBUFF_SIZE];
+
+std::vector<NoteValueP> NoteValues[CH_MAX];
+std::vector<VoiceValueP> VoiceValues;
 
 // 70460
 int CalcTime(int inframe)
@@ -157,16 +69,9 @@ int CalcNote(int freq)
 void StartRecord(double basespeed,int inframe)
 {
     BaseSpeed = ceil(basespeed);
-    int base = BaseSpeed;
-    for (int iI = 0; iI < 383; ++iI) {
-        if ((base >> (iI + 1)) == 0) {
-            SpeedDiv = iI;
-            break;
-}
-    }
     BaseFrame = inframe;
-    //int testnum = 1 << SpeedDiv;
-    //printf("speed = %d\n", testnum);
+
+    VoiceValues.clear();
 }
 void ResetRecord()
 {
@@ -248,21 +153,58 @@ void WriteRecord(int chan, unsigned short freq, unsigned short vol, int frameCou
     }
 }
 
+int checkVoiceData(NoteValueP noteValue)
+{
+    int voiceno = -1;
+    if (noteValue->vol.size() > 1)
+    {
+        bool addf = true;
+        for (int iI = 0; iI < VoiceValues.size(); iI++) {
+            VoiceValueP srcVoice = VoiceValues[iI];
+            if (srcVoice->vol.size() != noteValue->vol.size()) {
+                continue;
+            }
+            bool samef = true;
+            for (int iC = 0; iC < noteValue->vol.size(); ++iC)
+            {
+                if (srcVoice->vol[iC] != noteValue->vol[iC]) {
+                    samef = false;
+                    break;
+                }
+                if (srcVoice->time[iC] != noteValue->time[iC]) {
+                    samef = false;
+                    break;
+                }
+            }
+            if (samef) {
+                voiceno = iI;
+                addf = false;
+                break;
+            }
+        }
+        if (addf) {
+            VoiceValueP newVoice = VoiceValueP(new VoiceValue());
+            newVoice->vol = noteValue->vol;
+            newVoice->time = noteValue->time;
+            voiceno = VoiceValues.size();
+            VoiceValues.push_back(newVoice);
+        }
+    }
+    return voiceno;
+}
+
 void DumpRecord(char *filename)
 {
     FILE *fp = fopen(filename, "wt+");
     int wsize;
-    std::vector<NoteValueP> NoteValues;
     std::string str;
 
     if (fp != NULL)
     {
         for (int iI = 0; iI < CH_MAX; ++iI)
         {
-            NoteValues.clear();
+            NoteValues[iI].clear();
             NoteValueP newNoteValue = NULL;
-            str.clear();
-            int old_oct = -1;
             for (RecordDataP record : RecordTable[iI])
             {
                 int time = record->elaptime - record->starttime;
@@ -286,7 +228,14 @@ void DumpRecord(char *filename)
                 {
                     if (newNoteValue != NULL)
                     {
-                        NoteValues.push_back(newNoteValue);
+                        if (newNoteValue->note != 0) {
+                            newNoteValue->voiceno = checkVoiceData(newNoteValue);
+                        }
+                        else {
+                            newNoteValue->voiceno = -1;
+                        }
+                        NoteValues[iI].push_back(newNoteValue);
+                        newNoteValue = NULL;
                     }
                     newNoteValue = NoteValueP(new NoteValue());
                     newNoteValue->note = record->note;
@@ -296,111 +245,45 @@ void DumpRecord(char *filename)
                 }
             }
             // channel データ収集OK
-            str += std::format(";Channel {} Start -----\n", iI);
+        }
+        for (int iI = 0; iI < CH_MAX; ++iI)
+        {
+            str.clear();
+            str += std::format(";Channel {} Start -----\n{}\n", iI, Chan_str[iI]);
             int calctime = 0;
-            for (NoteValueP record : NoteValues)
+            int calcVol = -1;
+            int old_oct = -1;
+            for (NoteValueP record : NoteValues[iI])
             {
                 int totaltime = CalcTime(record->totaltime);
                 calctime += record->totaltime;
-#if 0
-                if (record->note == 0)
-                {
-                    str += std::format(" REST [V{}:{}]\t\t;\n", record->vol[0], record->totaltime);
-                }
-                else {
-                    int o = record->note / 12;
-                    int n = record->note % 12;
-                    if (old_oct != o) {
-                        str += std::format(" o{} ", o);
-                        old_oct = o;
-                    }
-                    int totaltime = calcTime(record->totaltime);
-                    str += std::format(" V{} {} [:{}]\t\t; ", record->vol[0],note_str[n], totaltime);
-                    for (int iJ = 0; iJ < record->time.size(); ++iJ)
-                    {
-                        str += std::format("[V{}:{}] ", record->vol[iJ], record->time[iJ]);
-                    }
-                    str += "\n";
-                }
-#else
                 if (record->note == 0)
                 {
                     str += std::format(" r:{}", totaltime);
                 }
                 else {
-                    int o = record->note / 12;
+                    int o = (record->note / 12) +1;
                     int n = record->note % 12;
                     if (old_oct != o) {
                         str += std::format(" o{}", o);
                         old_oct = o;
                     }
-                    str += std::format(" V{}{}:{}", record->vol[0], note_str[n], totaltime);
+                    if (calcVol != record->vol[0]) {
+                        str += std::format(" V{}{}:{}", record->vol[0], note_str[n], totaltime);
+                        calcVol = record->vol[0];
+                    }
+                    else {
+                        str += std::format(" {}:{}", note_str[n], totaltime);
+                    }
                 }
                 if (calctime >= BaseSpeed) {
                     str += "\n";
                     calctime = 0;
                 }
-#endif
             }
             str += std::format("\n;Channel {} End -----\n", iI);
             fwrite(str.c_str(), str.size(), 1, fp);
         }
-
-#if 0
-        for (int iI = 0; iI < CH_MAX; ++iI) {
-            std::string outstr;
-            std::string str;
-            str = std::format(";Channel {} Start -----", iI);
-            outstr = str;
-            RecordDataP oldrecord = NULL;
-            for (RecordDataP record : RecordTable[iI]) {
-                int time = record->elaptime - record->starttime;
-                str.clear();
-                if (iI < (CH_MAX - 1))
-                {
-                    // tone channel
-                    str = " ";
-                    if (record->vol == 0x0f) {
-                        //if(!((oldrecord != NULL) && (oldrecord->vol != record->vol)))
-                        {
-                            str += "REST ";
-                        }
-                    }
-                    else if (record->freq == 0) {
-                        str += "---- ";
-                    }
-                    else if((oldrecord != NULL) && (oldrecord->note != record->note))
-                    {
-                        int o = record->note / 12;
-                        int n = record->note % 12;
-                        str +=std::format("o{} {} ", o, note_str[n]);
-                    }
-
-                    if (oldrecord == NULL) {
-                        outstr += std::format("\n{}[V{}:{}]", str, record->vol, time);
-                    }
-                    else if (oldrecord->note == record->note)
-                    {
-                        outstr += std::format("{}[V{}:{}] ", str, record->vol, time);
-                    }
-                    else
-                    {
-                        outstr += std::format("\n{}[V{}:{}] ", str, record->vol, time);
-                    }
-                    oldrecord = record;
-                    // tone channel
-                }
-                else {
-                    // noise channel
-                    outstr += std::format(" freq 0x{:#x} V{} {}\n", record->freq, record->vol, time);
-                }
-                fwrite(outstr.c_str(), outstr.size(), 1, fp);
-                outstr.clear();
-            }
-            outstr = std::format("\n;Channel {} End -----\n", iI);
-            fwrite(outstr.c_str(), outstr.size(), 1, fp);
-        }
-#endif
         fclose(fp);
     }
 }
