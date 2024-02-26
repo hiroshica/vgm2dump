@@ -246,6 +246,18 @@ void DumpRecord(char *filename)
             }
             // channel データ収集OK
         }
+        // voice data out
+        for (int iI = 0; iI < VoiceValues.size(); ++iI)
+        {
+            VoiceValueP record = VoiceValues[iI];
+            str += std::format("@{} psg\n", iI);
+            for (int iJ = 0; iJ < record->vol.size(); ++iJ) {
+                int time = CalcTime(record->time[iJ]);
+                str += std::format(" {}:{} ", 15 - record->vol[iJ],time);
+            }
+            str += "\n";
+        }
+        fwrite(str.c_str(), str.size(), 1, fp);
         for (int iI = 0; iI < CH_MAX; ++iI)
         {
             str.clear();
@@ -268,6 +280,10 @@ void DumpRecord(char *filename)
                         str += std::format(" o{}", o);
                         old_oct = o;
                     }
+                    if (record->voiceno != -1) {
+                        str += std::format(" @{}", record->voiceno);
+                    }
+
                     if (calcVol != record->vol[0]) {
                         str += std::format(" V{}{}:{}", record->vol[0], note_str[n], totaltime);
                         calcVol = record->vol[0];

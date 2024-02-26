@@ -553,7 +553,7 @@ Exit_AudDeinit:
 #if defined(_DEBUG) && (_MSC_VER >= 1400)
 	if (_CrtDumpMemoryLeaks()) {
 		printf("Memory leaks\n");
-		_getch();
+		//_getch();
 	}
 #endif
 	
