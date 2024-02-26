@@ -246,6 +246,7 @@ void DumpRecord(char *filename)
             }
             // channel データ収集OK
         }
+
         // voice data out
         for (int iI = 0; iI < VoiceValues.size(); ++iI)
         {
