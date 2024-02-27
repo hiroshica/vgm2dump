@@ -27,7 +27,7 @@ const char* Chan_str[] =
     "G",
     "H",
     "I",
-    "K"
+    "J"
 };
 
 #define CH_MAX (4)
@@ -286,7 +286,7 @@ void DumpRecord(char *filename)
                     }
 
                     if (calcVol != record->vol[0]) {
-                        str += std::format(" V{}{}:{}", record->vol[0], note_str[n], totaltime);
+                        str += std::format(" V{}{}:{}", 15 - record->vol[0], note_str[n], totaltime);
                         calcVol = record->vol[0];
                     }
                     else {

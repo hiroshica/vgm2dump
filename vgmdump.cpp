@@ -1,4 +1,4 @@
-#ifdef _WIN32
+﻿#ifdef _WIN32
 //#define _WIN32_WINNT	0x500	// for GetConsoleWindow()
 #include <windows.h>
 #ifdef _DEBUG
@@ -217,6 +217,7 @@ static UINT32 VGMLen;
 static UINT8* VGMData;
 static UINT32 VGMPos;
 static lpVGM_HEADER VGMHdr;
+static UINT32 oldVGMSmplPos;
 static UINT32 VGMSmplPos;
 static UINT32 renderSmplPos;
 #define CHIP_COUNT	0x29
@@ -302,7 +303,7 @@ static void PlayerLogCallback(void* userParam, PlayerBase* player, UINT8 level, 
 	return;
 }
 
-// Title 11���� * 4
+// Title 11小節 * 4
 UINT8 TestMain()
 {
 	UINT8 retVal;
@@ -350,7 +351,7 @@ UINT8 TestMain()
 	{
 		VGMPlayer* vgmplay = dynamic_cast<VGMPlayer*>(player);
 		const VGM_HEADER* vgmhdr = vgmplay->GetFileHeader();
-		// ��  BPM = (����*4) * (60s / file�b��)
+		// 式  BPM = (小節*4) * (60s / file秒数)
 		FileTime = player->Tick2Second(player->GetTotalTicks()), player->Tick2Second(player->GetLoopTicks());
 		Frame = 11;
 		BPM = (Frame * 4) * (60 / FileTime);
@@ -1100,6 +1101,7 @@ static void InitVGMChips(void)
 	memset(&PCMBank, 0x00, sizeof(VGM_PCM_BANK) * PCM_BANK_COUNT);
 	memset(&PCMComprTbl, 0x00, sizeof(PCM_COMPR_TBL));
 	
+	oldVGMSmplPos = 0;
 	VGMSmplPos = 0;
 	renderSmplPos = 0;
 	VGMPos = VGMHdr.lngDataOffset;
@@ -1168,6 +1170,16 @@ static void DeinitVGMChips(void)
 
 static void SendChipCommand_Data8(UINT8 chipID, UINT8 chipNum, UINT8 ofs, UINT8 data)
 {
+	UINT32 elapPos = VGMSmplPos - oldVGMSmplPos;
+	if (elapPos == 0) {
+		printf("Now Frame = now %d : old = %d elap=%d\r", VGMSmplPos, oldVGMSmplPos, elapPos);
+	}
+	else {
+		printf("Now Frame = now %d : old = %d elap=%d\n", VGMSmplPos, oldVGMSmplPos, elapPos);
+	}
+	oldVGMSmplPos = VGMSmplPos;
+	// elap =>= 735 が正式の解析データらしい(それ以前は初期化みたい
+
 	VGM_CHIPDEV* cDev = &VGMChips[chipID][chipNum];
 	if (cDev->write8 == NULL)
 		return;
