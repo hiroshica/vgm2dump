@@ -34,9 +34,12 @@ typedef struct recorddata{
     unsigned short freq;
     unsigned short vol;
     int    starttime;
+    int    prevtime;
     int    elaptime;
 } RecordData;
 typedef std::shared_ptr<RecordData> RecordDataP;
+typedef std::vector<RecordDataP> RecordDataV;
+typedef std::shared_ptr<RecordDataV> RecordTableP;
 
 void StartRecord(double basespeed, int inframe);
 void ResetRecord();

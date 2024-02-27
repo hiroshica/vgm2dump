@@ -1172,34 +1172,44 @@ static void SendChipCommand_Data8(UINT8 chipID, UINT8 chipNum, UINT8 ofs, UINT8 
 {
 	UINT32 elapPos = VGMSmplPos - oldVGMSmplPos;
 	if (elapPos == 0) {
-		printf("Now Frame = now %d : old = %d elap=%d\r", VGMSmplPos, oldVGMSmplPos, elapPos);
+		//printf("Now Frame = now %d : old = %d elap=%d\r", VGMSmplPos, oldVGMSmplPos, elapPos);
 	}
 	else {
-		printf("Now Frame = now %d : old = %d elap=%d\n", VGMSmplPos, oldVGMSmplPos, elapPos);
+		//printf("Now Frame = now %d : old = %d elap=%d\n", VGMSmplPos, oldVGMSmplPos, elapPos);
 	}
 	oldVGMSmplPos = VGMSmplPos;
 	// elap =>= 735 が正式の解析データらしい(それ以前は初期化みたい
-
 	VGM_CHIPDEV* cDev = &VGMChips[chipID][chipNum];
 	if (cDev->write8 == NULL)
 		return;
 	
 	cDev->write8(cDev->defInf.dataPtr, ofs, data);
-
 	if (data & 0x80)
 	{
+		// first byte
 		LatchedRegister = (data >> 4) & 0x07;
 		Register[LatchedRegister] = (Register[LatchedRegister] & 0x3f0) /* zero low 4 bits */
 			| (data & 0xf);                            /* and replace with data */
 	}
 	else {
+		// second byte
 		if (!(LatchedRegister % 2) && (LatchedRegister < 5))
 		{
-				Register[LatchedRegister] = (Register[LatchedRegister] & 0x00f) /* zero high 6 bits */
+			// second byte
+			Register[LatchedRegister] = (Register[LatchedRegister] & 0x00f) /* zero high 6 bits */
 				| ((data & 0x3f) << 4);                 /* and replace with data */
 		}
 		else {
+			// ??
 			Register[LatchedRegister] = (data & 0x0f);                 /* and replace with data */
+		}
+	}
+	if ((LatchedRegister & 1))
+	{
+		//if (VGMSmplPos >= 735)
+		{
+			int iI = LatchedRegister >> 1;
+			//WriteRecord(iI, Register[LatchedRegister - 1], Register[LatchedRegister], VGMSmplPos);
 		}
 	}
 

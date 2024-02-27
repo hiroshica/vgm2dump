@@ -31,7 +31,8 @@ const char* Chan_str[] =
 };
 
 #define CH_MAX (4)
-std::vector<RecordDataP> RecordTable[CH_MAX];
+
+std::vector<RecordTableP> RecordTables;
 double BaseSpeed;
 int BaseFrame;
 
@@ -72,6 +73,11 @@ void StartRecord(double basespeed,int inframe)
     BaseFrame = inframe;
 
     VoiceValues.clear();
+    for (int iI = 0; iI < CH_MAX; ++iI)
+    {
+        RecordTableP newtable(new RecordDataV());
+        RecordTables.push_back(newtable);
+    }
 }
 void ResetRecord()
 {
@@ -82,7 +88,7 @@ void ResetRecord()
             free(record);
         }
 #endif
-        RecordTable[iI].clear();
+        RecordTables.clear();
     }
 }
 
@@ -92,45 +98,27 @@ void debugcallback()
 
 void WriteRecord(int chan, unsigned short freq, unsigned short vol, int frameCount)
 {
-    if (chan == 0)
+    RecordTableP RecordTable = RecordTables[chan];
+    if (chan == 1)
     {
         debugcallback();
     }
     bool addflag = false;
-    if (RecordTable[chan].empty())
+    if (RecordTable->empty())
     {
         addflag = true;
     }
     else
     {
-        RecordDataP oldrecord = RecordTable[chan][RecordTable[chan].size() - 1];
-        if (vol == 0x0f)
+        RecordDataP oldrecord = RecordTable->at(RecordTable->size() - 1);
+        if ((vol == oldrecord->vol) && (freq == oldrecord->freq))
         {
-            // mute data
-            freq = 0;
-            if (vol == oldrecord->vol)
-            {
-                oldrecord->elaptime = frameCount;
-            }
-            else
-            {
-                addflag = true;
-            }
+            // ひとつ前と同じデータなので同じ扱い
+
+            oldrecord->elaptime++;
         }
-        else if (freq != oldrecord->freq)
-        {
-            oldrecord->elaptime = frameCount;
+        else{
             addflag = true;
-        }
-        else if (vol != oldrecord->vol)
-        {
-            oldrecord->elaptime = frameCount;
-            addflag = true;
-        }
-        else
-        {
-            // freq/vol 両方とも同じデータだった
-            oldrecord->elaptime = frameCount;
         }
     }
     if (addflag)
@@ -147,8 +135,8 @@ void WriteRecord(int chan, unsigned short freq, unsigned short vol, int frameCou
             }
             record->vol = vol;
             record->starttime = frameCount;
-            record->elaptime = frameCount;
-            RecordTable[chan].push_back(record);
+            record->elaptime = 0;
+            RecordTable->push_back(record);
         }
     }
 }
@@ -203,11 +191,14 @@ void DumpRecord(char *filename)
     {
         for (int iI = 0; iI < CH_MAX; ++iI)
         {
+            RecordTableP RecordTable = RecordTables[iI];
+
             NoteValues[iI].clear();
             NoteValueP newNoteValue = NULL;
-            for (RecordDataP record : RecordTable[iI])
+            for(int LP = 0;LP < RecordTable->size();++LP)
             {
-                int time = record->elaptime - record->starttime;
+                RecordDataP record = RecordTable->at(LP);
+                int time = record->elaptime;    // -record->starttime;
                 bool addf = false;
                 if (newNoteValue == NULL)
                 {
