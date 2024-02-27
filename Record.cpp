@@ -99,7 +99,7 @@ void debugcallback()
 void WriteRecord(int chan, unsigned short freq, unsigned short vol, int frameCount)
 {
     RecordTableP RecordTable = RecordTables[chan];
-    if (chan == 1)
+    if (chan == 3)
     {
         debugcallback();
     }
@@ -129,9 +129,12 @@ void WriteRecord(int chan, unsigned short freq, unsigned short vol, int frameCou
         {
             record->freq = freq;
             record->note = 0;
-            if (chan < 3 && freq != 0)
+            if (chan < (CH_MAX-1) && freq != 0)
             {
                 record->note = CalcNote((int)freq);
+            }
+            else {
+                record->note = (int)freq;
             }
             record->vol = vol;
             record->starttime = frameCount;
@@ -195,24 +198,30 @@ void DumpRecord(char *filename)
 
             NoteValues[iI].clear();
             NoteValueP newNoteValue = NULL;
-            for(int LP = 0;LP < RecordTable->size();++LP)
+            for (int LP = 0; LP < RecordTable->size(); ++LP)
             {
                 RecordDataP record = RecordTable->at(LP);
                 int time = record->elaptime;    // -record->starttime;
                 bool addf = false;
-                if (newNoteValue == NULL)
+                if (iI < (CH_MAX - 1))
                 {
-                    addf = true;
+                    if (newNoteValue == NULL)
+                    {
+                        addf = true;
+                    }
+                    else if (newNoteValue->note == record->note)
+                    {
+                        addf = false;
+                        newNoteValue->time.push_back(time);
+                        newNoteValue->vol.push_back(record->vol);
+                        newNoteValue->totaltime += time;
+                    }
+                    else
+                    {
+                        addf = true;
+                    }
                 }
-                else if (newNoteValue->note == record->note)
-                {
-                    addf = false;
-                    newNoteValue->time.push_back(time);
-                    newNoteValue->vol.push_back(record->vol);
-                    newNoteValue->totaltime += time;
-                }
-                else
-                {
+                else{
                     addf = true;
                 }
                 if (addf)
@@ -266,22 +275,28 @@ void DumpRecord(char *filename)
                     str += std::format(" r:{}", totaltime);
                 }
                 else {
-                    int o = (record->note / 12) +1;
-                    int n = record->note % 12;
-                    if (old_oct != o) {
-                        str += std::format(" o{}", o);
-                        old_oct = o;
-                    }
-                    if (record->voiceno != -1) {
-                        str += std::format(" @{}", record->voiceno);
-                    }
+                    if (iI < (CH_MAX - 1))
+                    {
+                        int o = (record->note / 12) + 1;
+                        int n = record->note % 12;
+                        if (old_oct != o) {
+                            str += std::format(" o{}", o);
+                            old_oct = o;
+                        }
+                        if (record->voiceno != -1) {
+                            str += std::format(" @{}", record->voiceno);
+                        }
 
-                    if (calcVol != record->vol[0]) {
-                        str += std::format(" V{}{}:{}", 15 - record->vol[0], note_str[n], totaltime);
-                        calcVol = record->vol[0];
+                        if (calcVol != record->vol[0]) {
+                            str += std::format(" V{}{}:{}", 15 - record->vol[0], note_str[n], totaltime);
+                            calcVol = record->vol[0];
+                        }
+                        else {
+                            str += std::format(" {}:{}", note_str[n], totaltime);
+                        }
                     }
                     else {
-                        str += std::format(" {}:{}", note_str[n], totaltime);
+                        str += std::format("{}:{}:{}\n",record->note, record->vol[0], totaltime);
                     }
                 }
                 if (calctime >= BaseSpeed) {
