@@ -33,8 +33,7 @@ typedef struct recorddata{
     int    note;
     unsigned short freq;
     unsigned short vol;
-    int    starttime;
-    int    prevtime;
+    //int    starttime;
     int    elaptime;
 } RecordData;
 typedef std::shared_ptr<RecordData> RecordDataP;

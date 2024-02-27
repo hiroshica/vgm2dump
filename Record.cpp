@@ -137,8 +137,8 @@ void WriteRecord(int chan, unsigned short freq, unsigned short vol, int frameCou
                 record->note = (int)freq;
             }
             record->vol = vol;
-            record->starttime = frameCount;
-            record->elaptime = 0;
+            //record->starttime = frameCount;
+            record->elaptime = 1;
             RecordTable->push_back(record);
         }
     }
@@ -200,6 +200,9 @@ void DumpRecord(char *filename)
             NoteValueP newNoteValue = NULL;
             for (int LP = 0; LP < RecordTable->size(); ++LP)
             {
+                if (LP > 480) {
+                    debugcallback();
+                }
                 RecordDataP record = RecordTable->at(LP);
                 int time = record->elaptime;    // -record->starttime;
                 bool addf = false;
@@ -234,16 +237,25 @@ void DumpRecord(char *filename)
                         else {
                             newNoteValue->voiceno = -1;
                         }
-                        NoteValues[iI].push_back(newNoteValue);
-                        newNoteValue = NULL;
                     }
                     newNoteValue = NoteValueP(new NoteValue());
                     newNoteValue->note = record->note;
                     newNoteValue->time.push_back(time);
                     newNoteValue->vol.push_back(record->vol);
                     newNoteValue->totaltime = time;
+                    NoteValues[iI].push_back(newNoteValue);
                 }
             }
+            if (newNoteValue != NULL)
+            {
+                if (newNoteValue->note != 0) {
+                    newNoteValue->voiceno = checkVoiceData(newNoteValue);
+                }
+                else {
+                    newNoteValue->voiceno = -1;
+                }
+            }
+
             // channel データ収集OK
         }
 
@@ -266,6 +278,7 @@ void DumpRecord(char *filename)
             int calctime = 0;
             int calcVol = -1;
             int old_oct = -1;
+            int old_voice = -1;
             for (NoteValueP record : NoteValues[iI])
             {
                 int totaltime = CalcTime(record->totaltime);
@@ -283,10 +296,13 @@ void DumpRecord(char *filename)
                             str += std::format(" o{}", o);
                             old_oct = o;
                         }
-                        if (record->voiceno != -1) {
-                            str += std::format(" @{}", record->voiceno);
+                        if (old_voice != record->voiceno)
+                        {
+                            if (record->voiceno != -1) {
+                                str += std::format(" @{}", record->voiceno);
+                                old_voice = record->voiceno;
+                            }
                         }
-
                         if (calcVol != record->vol[0]) {
                             str += std::format(" V{}{}:{}", 15 - record->vol[0], note_str[n], totaltime);
                             calcVol = record->vol[0];
@@ -296,7 +312,7 @@ void DumpRecord(char *filename)
                         }
                     }
                     else {
-                        str += std::format("{}:{}:{}\n",record->note, record->vol[0], totaltime);
+                        str += std::format(";{}:{}:{}\n",record->note, record->vol[0], totaltime);
                     }
                 }
                 if (calctime >= BaseSpeed) {
