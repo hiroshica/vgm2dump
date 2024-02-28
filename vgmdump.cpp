@@ -66,6 +66,14 @@ int __cdecl _getch(void);	// from conio.h
 // TestMain--------------------------------------------------
 
 
+#include <iostream>
+#include <filesystem>
+#include <vector>
+#include <string>
+#include <format>
+#include <memory>
+#include <cmath>
+
 #include "player/dblk_compr.h"
 #include "Record.h"
 
@@ -370,6 +378,7 @@ UINT8 TestMain()
 // TestMain--------------------------------------------------
 #endif
 
+
 // get filename (out ext)--------------------------------------------------
 std::string GetFileName(std::string fullpath) {
 
@@ -381,6 +390,45 @@ std::string GetFileName(std::string fullpath) {
 	return filename;
 }
 // get filename (out ext)--------------------------------------------------
+std::string GetFileExt(std::string fullpath) {
+
+	int ext_i = fullpath.find_last_of(".");
+	std::string extname;
+	if (ext_i != std::string::basic_string::npos) {
+		extname = fullpath.substr(ext_i, fullpath.size() - ext_i);
+	}
+	return extname;
+}
+
+std::vector<std::string> GetSrcFiles(std::string srcdir, std::string ext)
+{
+	std::vector<std::string> getfiles;
+	std::filesystem::path path1(srcdir);
+	if (std::filesystem::is_directory(path1)) {
+		auto dir_it = std::filesystem::directory_iterator(path1);
+		for (auto& p : dir_it)
+		{
+			std::string s = p.path().string();
+			std::string e = GetFileExt(s);
+			if (s.find(ext) != -1) {
+				getfiles.push_back(p.path().string());
+			}
+		}
+	}
+	return getfiles;
+}
+
+
+static void checkMemLeak()
+{
+#if defined(_DEBUG) && (_MSC_VER >= 1400)
+	if (_CrtDumpMemoryLeaks()) {
+		printf("Memory leaks\n");
+		//_getch();
+	}
+#endif
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -414,6 +462,9 @@ int main(int argc, char* argv[])
 		else if (strcmp(argv[iI], "-dst") == 0) {
 			mode = 2;
 		}
+		else if (strcmp(argv[iI], "-src") == 0) {
+			mode = 3;
+		}
 		else {
 			switch (mode)
 			{
@@ -423,13 +474,15 @@ int main(int argc, char* argv[])
 			case 2:
 				dstdir = std::string(argv[iI]);
 				break;
+			case 3:
+				baseVGM = GetSrcFiles(std::string(argv[iI]), std::string(".vgm"));
+				break;
 			}
 		}
 	}
 
 	//-------------------------------------------
 	//TestMain();
-	//StartRecord((44100.0*60) / (BPM / 4.0), (int)sampleRate/60);
 	//-------------------------------------------
 	for (std::string srcfilename : baseVGM)
 	{
@@ -438,8 +491,9 @@ int main(int argc, char* argv[])
 		// convert start -------------------------------------------
 		sampleRate = 44100;
 		VGMEndFlag = false;
-		StartRecord(0, (int)sampleRate / 60);
-		printf("Loading VGM ...\n");
+		//StartRecord((44100.0*60) / (BPM / 4.0), (int)sampleRate/60);
+		StartRecord(sampleRate, (int)sampleRate/60);
+		printf("Loading VGM  %s ...\n", srcfilename.c_str());
 		hFile = gzopen(srcfilename.c_str(), "rb");
 		if (hFile == NULL)
 		{
@@ -574,7 +628,8 @@ int main(int argc, char* argv[])
 
 	Exit_SndDrvDeinit:
 		DeinitVGMChips();
-		free(VGMData);	VGMData = NULL;
+		free(VGMData);
+		VGMData = NULL;
 		//Exit_AudDrvDeinit:
 		AudioDrv_Deinit(&audDrv);
 		if (audDrvLog != NULL)
@@ -583,12 +638,7 @@ int main(int argc, char* argv[])
 		Audio_Deinit();
 	}
 	printf("Done.\n");
-#if defined(_DEBUG) && (_MSC_VER >= 1400)
-	if (_CrtDumpMemoryLeaks()) {
-		printf("Memory leaks\n");
-		//_getch();
-	}
-#endif
+	checkMemLeak();
 	
 	return 0;
 }

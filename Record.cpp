@@ -297,19 +297,21 @@ void DumpRecord(char *filename)
                             str += std::format(" o{}", o);
                             old_oct = o;
                         }
-                        if (old_voice != record->voiceno)
                         {
-                            if (record->voiceno != -1) {
-                                str += std::format(" @{}", record->voiceno);
-                                old_voice = record->voiceno;
+                            if ((old_voice != record->voiceno) && (record->vol[0] != 0x000f))
+                            {
+                                if (record->voiceno != -1) {
+                                    str += std::format(" @{}", record->voiceno);
+                                    old_voice = record->voiceno;
+                                }
                             }
-                        }
-                        if (calcVol != record->vol[0]) {
-                            str += std::format(" V{}{}:{}", 15 - record->vol[0], note_str[n], totaltime);
-                            calcVol = record->vol[0];
-                        }
-                        else {
-                            str += std::format(" {}:{}", note_str[n], totaltime);
+                            if (calcVol != record->vol[0]) {
+                                str += std::format(" V{}{}:{}", 15 - record->vol[0], note_str[n], totaltime);
+                                calcVol = record->vol[0];
+                            }
+                            else {
+                                str += std::format(" {}:{}", note_str[n], totaltime);
+                            }
                         }
                     }
                     else {
