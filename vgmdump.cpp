@@ -234,9 +234,13 @@ VGM_PCM_BANK PCMBank[PCM_BANK_COUNT];
 PCM_COMPR_TBL PCMComprTbl;
 UINT32 ym2612_pcmBnkPos;
 
-char vgmfile[2048];
-char dumpfile[2048] = "test.dump";
+std::vector<std::string> baseVGM;
+std::string dstdir;
+//char vgmfile[2048];
+//char dstdir[2048];
+//char dumpfile[2048] = "test.dump";
 
+#if 0
 // TestMain--------------------------------------------------
 static PlayerA mainPlr;
 static volatile UINT8 playState;
@@ -364,7 +368,19 @@ UINT8 TestMain()
 	mainPlr.UnregisterAllPlayers();
 }
 // TestMain--------------------------------------------------
+#endif
 
+// get filename (out ext)--------------------------------------------------
+std::string GetFileName(std::string fullpath) {
+
+	int path_i = fullpath.find_last_of("\\") + 1;
+	int ext_i = fullpath.find_last_of(".");
+	std::string pathname = fullpath.substr(0, path_i + 1);
+	std::string extname = fullpath.substr(ext_i, fullpath.size() - ext_i);
+	std::string filename = fullpath.substr(path_i, ext_i - path_i);
+	return filename;
+}
+// get filename (out ext)--------------------------------------------------
 
 int main(int argc, char* argv[])
 {
@@ -385,172 +401,188 @@ int main(int argc, char* argv[])
 
 	if (argc < 2)
 	{
-		printf("Usage: vgmtest -vgm vgmfile -dump dumpfile\n");
+		printf("Usage: vgmtest -dst destnation directory -vgm vgmfile ...\n");
 		return 0;
 	}
 		// check option
+	int mode = 0;
 	for (int iI = 0; iI < argc; ++iI)
 	{
 		if (strcmp(argv[iI], "-vgm") == 0) {
-			iI++;
-			strcpy(vgmfile, argv[iI]);
+			mode = 1;
 		}
-		else if (strcmp(argv[iI], "-dump") == 0) {
-			iI++;
-			strcpy(dumpfile, argv[iI]);
+		else if (strcmp(argv[iI], "-dst") == 0) {
+			mode = 2;
+		}
+		else {
+			switch (mode)
+			{
+			case 1:
+				baseVGM.push_back(std::string(argv[iI]));
+				break;
+			case 2:
+				dstdir = std::string(argv[iI]);
+				break;
+			}
 		}
 	}
 
-	sampleRate = 44100;
-	VGMEndFlag = false;
 	//-------------------------------------------
-	TestMain();
-	StartRecord((44100.0*60) / (BPM / 4.0), (int)sampleRate/60);
+	//TestMain();
+	//StartRecord((44100.0*60) / (BPM / 4.0), (int)sampleRate/60);
 	//-------------------------------------------
+	for (std::string srcfilename : baseVGM)
+	{
+		std::string dstfilename = dstdir + "\\" + GetFileName(srcfilename) + ".mml";
 
-	printf("Loading VGM ...\n");
-	hFile = gzopen(vgmfile, "rb");
-	if (hFile == NULL)
-	{
-		printf("Error opening file.\n");
-		return 1;
-	}
-	VGMLen = 0;
-	VGMData = NULL;
-	gzread(hFile, tempData, 0x08);
-	if (! memcmp(&tempData[0], "Vgm ", 4))
-	{
-		VGMLen = 0x04 + tempData[0];
-		VGMData = (UINT8*)malloc(VGMLen);
-		memcpy(&VGMData[0x00], tempData, 0x08);
-		gzread(hFile, &VGMData[0x08], VGMLen - 0x08);
-		
-		memcpy(&tempData[0], &VGMData[0x34], 0x04);	// get data offset
-		tempData[0] += (tempData[0] == 0x00) ? 0x40 : 0x34;
-		if (tempData[0] >= 0xC0)
-			memcpy(&tempData[1], &VGMData[0xBC], 0x04);	// get extra header offset
-		else
-			tempData[1] = 0x00;
-		tempData[1] += (tempData[1] == 0x00) ? 0x00 : 0xBC;
-		if (tempData[1] && tempData[0] > tempData[1])
-			tempData[0] = tempData[1];	// the main header ends where the extra header begins
-		if (tempData[0] > sizeof(lpVGM_HEADER))
-			tempData[0] = sizeof(lpVGM_HEADER);	// don't copy too many bytes into VGM_HEADER struct
-		memset(&VGMHdr, 0x00, sizeof(lpVGM_HEADER));
-		memcpy(&VGMHdr, &VGMData[0x00], tempData[0]);
-	}
-	gzclose(hFile);
-	if (! VGMLen)
-	{
-		printf("Error reading file!\n");
-		return 2;
-	}
-	printf("Opening Audio Device ...\n");
-	Audio_Init();
-	drvCount = Audio_GetDriverCount();
-	if (! drvCount)
-		goto Exit_AudDeinit;
-	
-	idWavOut = 1;
-	idWavOutDev = 0;
-	idWavWrt = (UINT32)-1;
-	//idWavWrt = 0;
-	
-	Audio_GetDriverInfo(idWavOut, &drvInfo);
-	printf("Using driver %s.\n", drvInfo->drvName);
-	retVal = AudioDrv_Init(idWavOut, &audDrv);
-	if (retVal)
-	{
-		printf("WaveOut: Drv Init Error: %02X\n", retVal);
-		goto Exit_AudDeinit;
-	}
+		// convert start -------------------------------------------
+		sampleRate = 44100;
+		VGMEndFlag = false;
+		StartRecord(0, (int)sampleRate / 60);
+		printf("Loading VGM ...\n");
+		hFile = gzopen(srcfilename.c_str(), "rb");
+		if (hFile == NULL)
+		{
+			printf("Error opening file.\n");
+			return 1;
+		}
+		VGMLen = 0;
+		VGMData = NULL;
+		gzread(hFile, tempData, 0x08);
+		if (!memcmp(&tempData[0], "Vgm ", 4))
+		{
+			VGMLen = 0x04 + tempData[0];
+			VGMData = (UINT8*)malloc(VGMLen);
+			memcpy(&VGMData[0x00], tempData, 0x08);
+			gzread(hFile, &VGMData[0x08], VGMLen - 0x08);
+
+			memcpy(&tempData[0], &VGMData[0x34], 0x04);	// get data offset
+			tempData[0] += (tempData[0] == 0x00) ? 0x40 : 0x34;
+			if (tempData[0] >= 0xC0)
+				memcpy(&tempData[1], &VGMData[0xBC], 0x04);	// get extra header offset
+			else
+				tempData[1] = 0x00;
+			tempData[1] += (tempData[1] == 0x00) ? 0x00 : 0xBC;
+			if (tempData[1] && tempData[0] > tempData[1])
+				tempData[0] = tempData[1];	// the main header ends where the extra header begins
+			if (tempData[0] > sizeof(lpVGM_HEADER))
+				tempData[0] = sizeof(lpVGM_HEADER);	// don't copy too many bytes into VGM_HEADER struct
+			memset(&VGMHdr, 0x00, sizeof(lpVGM_HEADER));
+			memcpy(&VGMHdr, &VGMData[0x00], tempData[0]);
+		}
+		gzclose(hFile);
+		if (!VGMLen)
+		{
+			printf("Error reading file!\n");
+			return 2;
+		}
+
+		printf("Opening Audio Device ...\n");
+		Audio_Init();
+		drvCount = Audio_GetDriverCount();
+		if (!drvCount)
+			goto Exit_AudDeinit;
+
+		idWavOut = 1;
+		idWavOutDev = 0;
+		idWavWrt = (UINT32)-1;
+		//idWavWrt = 0;
+
+		Audio_GetDriverInfo(idWavOut, &drvInfo);
+		printf("Using driver %s.\n", drvInfo->drvName);
+		retVal = AudioDrv_Init(idWavOut, &audDrv);
+		if (retVal)
+		{
+			printf("WaveOut: Drv Init Error: %02X\n", retVal);
+			goto Exit_AudDeinit;
+		}
 #ifdef AUDDRV_DSOUND
-	if (drvInfo->drvSig == ADRVSIG_DSOUND)
-		SetupDirectSound(audDrv);
+		if (drvInfo->drvSig == ADRVSIG_DSOUND)
+			SetupDirectSound(audDrv);
 #endif
-	devList = AudioDrv_GetDeviceList(audDrv);
-	
-	opts = AudioDrv_GetOptions(audDrv);
-	//opts->sampleRate = 96000;
-	opts->sampleRate = sampleRate;
-	opts->numChannels = 2;
-	opts->numBitsPerSmpl = 16;
-	smplSize = opts->numChannels * opts->numBitsPerSmpl / 8;
-	
-	InitVGMChips();
-	
-	canRender = false;
-	AudioDrv_SetCallback(audDrv, FillBuffer, NULL);
-	printf("Opening Device %u (%s) ...\n", idWavOutDev,devList->devNames[idWavOutDev]);
-	retVal = AudioDrv_Start(audDrv, idWavOutDev);
-	if (retVal)
-	{
-		printf("Dev Init Error: %02X\n", retVal);
-		goto Exit_SndDrvDeinit;
-	}
-	
-	smplAlloc = AudioDrv_GetBufferSize(audDrv) / smplSize;
-	smplData = (WAVE_32BS*)malloc(smplAlloc * sizeof(WAVE_32BS));
-	
-	audDrvLog = NULL;
-	if (idWavWrt != (UINT32)-1)
-	{
-		retVal = AudioDrv_Init(idWavWrt, &audDrvLog);
+		devList = AudioDrv_GetDeviceList(audDrv);
+
+		opts = AudioDrv_GetOptions(audDrv);
+		//opts->sampleRate = 96000;
+		opts->sampleRate = sampleRate;
+		opts->numChannels = 2;
+		opts->numBitsPerSmpl = 16;
+		smplSize = opts->numChannels * opts->numBitsPerSmpl / 8;
+
+		InitVGMChips();
+
+		canRender = false;
+		AudioDrv_SetCallback(audDrv, FillBuffer, NULL);
+		printf("Opening Device %u (%s) ...\n", idWavOutDev, devList->devNames[idWavOutDev]);
+		retVal = AudioDrv_Start(audDrv, idWavOutDev);
 		if (retVal)
-			audDrvLog = NULL;
-	}
-	if (audDrvLog != NULL)
-	{
-#ifdef AUDDRV_WAVEWRITE
-		void* aDrv = AudioDrv_GetDrvData(audDrvLog);
-		WavWrt_SetFileName(aDrv, "waveOut.wav");
-#endif
-		retVal = AudioDrv_Start(audDrvLog, 0);
-		if (retVal)
-			AudioDrv_Deinit(&audDrvLog);
-	}
-	if (audDrvLog != NULL)
-		AudioDrv_DataForward_Add(audDrv, audDrvLog);
-	
-	canRender = true;
-	while(1)
-	{
-#if 0
-		int inkey = getchar();
-		if (toupper(inkey) == 'P')
-			AudioDrv_Pause(audDrv);
-		else if (toupper(inkey) == 'R')
-			AudioDrv_Resume(audDrv);
-		else
-			break;
-		while(getchar() != '\n')
-			;
-#else
-		if (VGMEndFlag) {
-			break;
+		{
+			printf("Dev Init Error: %02X\n", retVal);
+			goto Exit_SndDrvDeinit;
 		}
+
+		smplAlloc = AudioDrv_GetBufferSize(audDrv) / smplSize;
+		smplData = (WAVE_32BS*)malloc(smplAlloc * sizeof(WAVE_32BS));
+
+		audDrvLog = NULL;
+		if (idWavWrt != (UINT32)-1)
+		{
+			retVal = AudioDrv_Init(idWavWrt, &audDrvLog);
+			if (retVal)
+				audDrvLog = NULL;
+		}
+		if (audDrvLog != NULL)
+		{
+#ifdef AUDDRV_WAVEWRITE
+			void* aDrv = AudioDrv_GetDrvData(audDrvLog);
+			WavWrt_SetFileName(aDrv, "waveOut.wav");
 #endif
+			retVal = AudioDrv_Start(audDrvLog, 0);
+			if (retVal)
+				AudioDrv_Deinit(&audDrvLog);
+		}
+		if (audDrvLog != NULL)
+			AudioDrv_DataForward_Add(audDrv, audDrvLog);
+
+		canRender = true;
+		while (1)
+		{
+#if 0
+			int inkey = getchar();
+			if (toupper(inkey) == 'P')
+				AudioDrv_Pause(audDrv);
+			else if (toupper(inkey) == 'R')
+				AudioDrv_Resume(audDrv);
+			else
+				break;
+			while (getchar() != '\n')
+				;
+#else
+			if (VGMEndFlag) {
+				break;
+			}
+#endif
+		}
+		canRender = false;
+
+		retVal = AudioDrv_Stop(audDrv);
+		if (audDrvLog != NULL)
+			retVal = AudioDrv_Stop(audDrvLog);
+		free(smplData);	smplData = NULL;
+		DumpRecord((char *)dstfilename.c_str());
+		ResetRecord();
+
+	Exit_SndDrvDeinit:
+		DeinitVGMChips();
+		free(VGMData);	VGMData = NULL;
+		//Exit_AudDrvDeinit:
+		AudioDrv_Deinit(&audDrv);
+		if (audDrvLog != NULL)
+			AudioDrv_Deinit(&audDrvLog);
+	Exit_AudDeinit:
+		Audio_Deinit();
 	}
-	canRender = false;
-	
-	retVal = AudioDrv_Stop(audDrv);
-	if (audDrvLog != NULL)
-		retVal = AudioDrv_Stop(audDrvLog);
-	free(smplData);	smplData = NULL;
-	DumpRecord(dumpfile);
-	ResetRecord();
-	
-Exit_SndDrvDeinit:
-	DeinitVGMChips();
-	free(VGMData);	VGMData = NULL;
-//Exit_AudDrvDeinit:
-	AudioDrv_Deinit(&audDrv);
-	if (audDrvLog != NULL)
-		AudioDrv_Deinit(&audDrvLog);
-Exit_AudDeinit:
-	Audio_Deinit();
 	printf("Done.\n");
-	
 #if defined(_DEBUG) && (_MSC_VER >= 1400)
 	if (_CrtDumpMemoryLeaks()) {
 		printf("Memory leaks\n");

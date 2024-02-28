@@ -72,6 +72,7 @@ void StartRecord(double basespeed,int inframe)
     BaseSpeed = ceil(basespeed);
     BaseFrame = inframe;
 
+    NoteValues->clear();
     VoiceValues.clear();
     for (int iI = 0; iI < CH_MAX; ++iI)
     {
@@ -83,13 +84,11 @@ void ResetRecord()
 {
     for (int iI = 0; iI < CH_MAX; ++iI)
     {
-#if false
-        for (RecordData* record : RecordTable[iI]) {
-            free(record);
-        }
-#endif
-        RecordTables.clear();
+        RecordTables.at(iI)->clear();
     }
+    RecordTables.clear();
+    NoteValues->clear();
+    VoiceValues.clear();
 }
 
 void debugcallback()
@@ -258,7 +257,9 @@ void DumpRecord(char *filename)
 
             // channel データ収集OK
         }
-
+        // defalu setup
+        str += "#platform mdsdrv\n\n";
+        str += "; voice datas\n";
         // voice data out
         for (int iI = 0; iI < VoiceValues.size(); ++iI)
         {
