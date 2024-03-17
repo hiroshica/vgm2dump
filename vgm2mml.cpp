@@ -212,7 +212,7 @@ static void ReadVGMFile();
 
 static INT LatchedRegister = -1;
 static unsigned short Register[8];
-static unsigned short OldRegister[8];
+//static unsigned short OldRegister[8];
 static bool VGMEndFlag = false;
 
 
@@ -498,8 +498,7 @@ int main(int argc, char* argv[])
 		//StartRecord((44100.0*60) / (BPM / 4.0), (int)sampleRate/60);
 		StartRecord(sampleRate, (int)sampleRate/60);
 		for (int iI = 0; iI < 8; iI++) {
-			Register[iI] = 0;
-			OldRegister[iI] = 0xffff;
+			Register[iI] = 0xffff;
 		}
 
 		printf("Loading VGM  %s ...\n", srcfilename.c_str());
@@ -576,9 +575,14 @@ static void TestCallback()
 			}
 			VGMPos += cmdLen;
 		}
+		//
+		// 記録方式を見直しする
 		for (int iI = 0; iI < 4; iI++) {
 			int index = iI << 1;
-			WriteRecord(iI, Register[index], Register[index + 1], renderSmplPos);
+			if (Register[index] != 0xffff && Register[index + 1] != 0xffff)
+			{
+				WriteRecord(iI, Register[index], Register[index + 1]&0x0f, renderSmplPos);
+			}
 		}
 	}
 }
@@ -1107,9 +1111,9 @@ static void SendChipCommand_Data8(UINT8 chipID, UINT8 chipNum, UINT8 ofs, UINT8 
 	if (data & 0x80)
 	{
 		// first byte
-		LatchedRegister = (data >> 4) & 0x07;
+		LatchedRegister = ((UINT16)data >> 4) & 0x07;
 		Register[LatchedRegister] = (Register[LatchedRegister] & 0x3f0) /* zero low 4 bits */
-			| (data & 0xf);                            /* and replace with data */
+			| ((UINT16)data & 0xf);                            /* and replace with data */
 	}
 	else {
 		// second byte
@@ -1117,11 +1121,11 @@ static void SendChipCommand_Data8(UINT8 chipID, UINT8 chipNum, UINT8 ofs, UINT8 
 		{
 			// second byte
 			Register[LatchedRegister] = (Register[LatchedRegister] & 0x00f) /* zero high 6 bits */
-				| ((data & 0x3f) << 4);                 /* and replace with data */
+				| (((UINT16)data & 0x3f) << 4);                 /* and replace with data */
 		}
 		else {
 			// ??
-			Register[LatchedRegister] = (data & 0x0f);                 /* and replace with data */
+			Register[LatchedRegister] = (UINT16)(data & 0x0f);                 /* and replace with data */
 		}
 	}
 	if ((LatchedRegister & 1))
