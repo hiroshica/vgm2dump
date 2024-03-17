@@ -1,8 +1,21 @@
-@30 pcm "pcmdata/2608_BD.wav"
-@31 pcm "pcmdata/2608_SD.wav"
-@32 pcm "pcmdata/2608_TOM.wav"
-@33 pcm "pcmdata/2608_RYM.wav"
-@34 pcm "pcmdata/2608_HH.wav"
-@35 pcm "pcmdata/2608_TOP.wav"
+#platform mdsdrv
 
-K o4 l8 [@30a@34a@31a@34a]8
+@100 pcm "pcmdata/2608_BD.wav"
+@101 pcm "pcmdata/2608_SD.wav"
+@102 pcm "pcmdata/2608_TOM.wav"
+@103 pcm "pcmdata/2608_RYM.wav"
+@104 pcm "pcmdata/2608_HH.wav"
+@105 pcm "pcmdata/2608_TOP.wav"
+
+
+*100 @100c	;a
+*101 @101c	;b
+*102 @102c	;c
+*103 @103c	;d
+*104 @104c	;e
+*105 @105c	;f
+
+FK D100o1
+
+F l8 [e]64
+K l4 [abab]8
