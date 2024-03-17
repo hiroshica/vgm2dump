@@ -643,6 +643,7 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
+volatile bool restartf = false;
 static void ProcessVGM(UINT32 smplCount, UINT32 smplOfs)
 {
 	UINT8 curChip;
@@ -651,7 +652,12 @@ static void ProcessVGM(UINT32 smplCount, UINT32 smplOfs)
 	VGM_LINKCDEV* clDev;
 	DEV_INFO* dacDInf;
 	
-	ReadVGMFile(smplCount);
+	if (!restartf)
+	{
+		restartf = true;
+		ReadVGMFile(smplCount);
+		restartf = false;
+	}
 	// I know that using a for-loop has a bad performance, but it's just for testing anyway.
 	for (curChip = 0x00; curChip < CHIP_COUNT; curChip ++)
 	for (chipNum = 0; chipNum < 2; chipNum ++)

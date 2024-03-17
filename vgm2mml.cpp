@@ -562,24 +562,24 @@ int main(int argc, char* argv[])
 
 static void TestCallback()
 {
-	UINT32 fcount = 0;
 	while (!VGMEndFlag)
 	{
 		UINT32 cmdLen;
-		//oldVGMSmplPos = VGMSmplPos;
-		if (VGMSmplPos == 0)
+		renderSmplPos++;
+		while (VGMSmplPos <= renderSmplPos)
 		{
 			cmdLen = DoVgmCommand(VGMData[VGMPos], &VGMData[VGMPos]);
+			if (!cmdLen)
+			{
+				VGMEndFlag = true;
+				break;
+			}
 			VGMPos += cmdLen;
-		}
-		else {
-			VGMSmplPos--;
 		}
 		for (int iI = 0; iI < 4; iI++) {
 			int index = iI << 1;
-			WriteRecord(iI, Register[index], Register[index + 1], fcount);
+			WriteRecord(iI, Register[index], Register[index + 1], renderSmplPos);
 		}
-		fcount++;
 	}
 }
 
