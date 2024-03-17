@@ -19,9 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{5CB6A553-019D-4048-AD7B-C2B009A912A4}</ProjectGuid>
+    <ProjectGuid>{C0B7497E-9AB6-4BBB-A12F-D37CCF305816}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>libVgmTest</RootNamespace>
+    <RootNamespace>vgm2mml</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -206,7 +206,7 @@
     <ClCompile Include="player\vgmplayer_cmdhandler.cpp" />
     <ClCompile Include="utils\StrUtils-CPConv_Win.c" />
     <ClCompile Include="player\dblk_compr.c" />
-    <ClCompile Include="vgmdump.cpp" />
+    <ClCompile Include="vgm2mml.cpp" />
     <ClCompile Include="vgm_dbcompr_bench.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>

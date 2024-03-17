@@ -1,6 +1,8 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34616.47
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libVgmTest", "libVgmTest.vcxproj", "{5CB6A553-019D-4048-AD7B-C2B009A912A4}"
 	ProjectSection(ProjectDependencies) = postProject
 		{33CBD0DD-B417-4116-B5C1-D24A782DB549} = {33CBD0DD-B417-4116-B5C1-D24A782DB549}
@@ -10,6 +12,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libAudio", "libAudio.vcxproj", "{33CBD0DD-B417-4116-B5C1-D24A782DB549}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libEmu", "libEmu.vcxproj", "{AD993CE2-4F1A-458C-86A0-69B9D7853D25}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vgm2mml", "vgm2mml.vcxproj", "{C0B7497E-9AB6-4BBB-A12F-D37CCF305816}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -43,6 +47,14 @@ Global
 		{AD993CE2-4F1A-458C-86A0-69B9D7853D25}.Release|Win32.Build.0 = Release|Win32
 		{AD993CE2-4F1A-458C-86A0-69B9D7853D25}.Release|x64.ActiveCfg = Release|x64
 		{AD993CE2-4F1A-458C-86A0-69B9D7853D25}.Release|x64.Build.0 = Release|x64
+		{C0B7497E-9AB6-4BBB-A12F-D37CCF305816}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C0B7497E-9AB6-4BBB-A12F-D37CCF305816}.Debug|Win32.Build.0 = Debug|Win32
+		{C0B7497E-9AB6-4BBB-A12F-D37CCF305816}.Debug|x64.ActiveCfg = Debug|x64
+		{C0B7497E-9AB6-4BBB-A12F-D37CCF305816}.Debug|x64.Build.0 = Debug|x64
+		{C0B7497E-9AB6-4BBB-A12F-D37CCF305816}.Release|Win32.ActiveCfg = Release|Win32
+		{C0B7497E-9AB6-4BBB-A12F-D37CCF305816}.Release|Win32.Build.0 = Release|Win32
+		{C0B7497E-9AB6-4BBB-A12F-D37CCF305816}.Release|x64.ActiveCfg = Release|x64
+		{C0B7497E-9AB6-4BBB-A12F-D37CCF305816}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

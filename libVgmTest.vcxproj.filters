@@ -104,7 +104,7 @@
     <ClCompile Include="Record.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="vgmdump_new.cpp">
+    <ClCompile Include="vgmdump.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>
