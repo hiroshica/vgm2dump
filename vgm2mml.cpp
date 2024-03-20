@@ -75,7 +75,8 @@ int __cdecl _getch(void);	// from conio.h
 #include <cmath>
 
 #include "player/dblk_compr.h"
-#include "Record.h"
+#include "MMLRecord.h"
+//#include "Record.h"
 
 typedef struct _lp_vgm_file_header
 {
@@ -211,8 +212,8 @@ static void ReadVGMFile();
 
 
 static INT LatchedRegister = -1;
+static bool RegisterWF[8];
 static unsigned short Register[8];
-//static unsigned short OldRegister[8];
 static bool VGMEndFlag = false;
 
 
@@ -244,6 +245,7 @@ VGM_PCM_BANK PCMBank[PCM_BANK_COUNT];
 PCM_COMPR_TBL PCMComprTbl;
 UINT32 ym2612_pcmBnkPos;
 
+MMLRecord *m_Records = NULL;
 std::vector<std::string> baseVGM;
 std::string dstdir;
 //char vgmfile[2048];
@@ -496,9 +498,10 @@ int main(int argc, char* argv[])
 		sampleRate = 44100;
 		VGMEndFlag = false;
 		//StartRecord((44100.0*60) / (BPM / 4.0), (int)sampleRate/60);
-		StartRecord(sampleRate, (int)sampleRate/60);
+		m_Records = new MMLRecord(sampleRate,  dstfilename);
 		for (int iI = 0; iI < 8; iI++) {
-			Register[iI] = 0xffff;
+			Register[iI] = 0;
+			RegisterWF[iI] = false;
 		}
 
 		printf("Loading VGM  %s ...\n", srcfilename.c_str());
@@ -540,8 +543,8 @@ int main(int argc, char* argv[])
 		}
 		InitVGMChips();
 		TestCallback();
-		DumpRecord((char*)dstfilename.c_str());
-		ResetRecord();
+		m_Records->DumpRecord();
+		delete m_Records;
 
 		if (smplData != NULL)
 		{
@@ -564,7 +567,9 @@ static void TestCallback()
 	while (!VGMEndFlag)
 	{
 		UINT32 cmdLen;
-		renderSmplPos++;
+		for (int iI = 0; iI < 8; iI++) {
+			RegisterWF[iI] = false;
+		}
 		while (VGMSmplPos <= renderSmplPos)
 		{
 			cmdLen = DoVgmCommand(VGMData[VGMPos], &VGMData[VGMPos]);
@@ -576,14 +581,14 @@ static void TestCallback()
 			VGMPos += cmdLen;
 		}
 		//
-		// 記録方式を見直しする
 		for (int iI = 0; iI < 4; iI++) {
 			int index = iI << 1;
-			if (Register[index] != 0xffff && Register[index + 1] != 0xffff)
+			//if(RegisterWF[index])
 			{
-				WriteRecord(iI, Register[index], Register[index + 1]&0x0f, renderSmplPos);
+				m_Records->WriteRecord(iI, Register[index], Register[index + 1], renderSmplPos);
 			}
 		}
+		renderSmplPos++;
 	}
 }
 
@@ -1128,16 +1133,7 @@ static void SendChipCommand_Data8(UINT8 chipID, UINT8 chipNum, UINT8 ofs, UINT8 
 			Register[LatchedRegister] = (UINT16)(data & 0x0f);                 /* and replace with data */
 		}
 	}
-	if ((LatchedRegister & 1))
-	{
-		//if (VGMSmplPos >= 735)
-		{
-			int iI = LatchedRegister >> 1;
-			//WriteRecord(iI, Register[LatchedRegister - 1], Register[LatchedRegister], VGMSmplPos);
-		}
-	}
-
-	//printf("SendData8 [%4x:%4x]\n", ofs, data);
+	RegisterWF[LatchedRegister] = true;
 	return;
 }
 

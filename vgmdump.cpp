@@ -76,6 +76,7 @@ int __cdecl _getch(void);	// from conio.h
 
 #include "player/dblk_compr.h"
 #include "Record.h"
+//#include "MMLRecord.h"
 
 typedef struct _lp_vgm_file_header
 {
