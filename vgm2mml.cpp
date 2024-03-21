@@ -248,141 +248,6 @@ UINT32 ym2612_pcmBnkPos;
 MMLRecord *m_Records = NULL;
 std::vector<std::string> baseVGM;
 std::string dstdir;
-//char vgmfile[2048];
-//char dstdir[2048];
-//char dumpfile[2048] = "test.dump";
-
-//#define TESTCODE
-#ifdef TESTCODE
-// TestMain--------------------------------------------------
-static PlayerA mainPlr;
-static volatile UINT8 playState;
-static UINT8 logLevel = DEVLOG_INFO;
-double BPM;
-double Frame;
-double FileTime;
-
-static UINT8 FilePlayCallback(PlayerBase* player, void* userParam, UINT8 evtType, void* evtParam)
-{
-	switch (evtType)
-	{
-	case PLREVT_START:
-		//printf("Playback started.\n");
-		break;
-	case PLREVT_STOP:
-		//printf("Playback stopped.\n");
-		break;
-	case PLREVT_LOOP:
-	{
-		UINT32* curLoop = (UINT32*)evtParam;
-		if (player->GetState() & PLAYSTATE_SEEK)
-			break;
-		printf("Loop %u.\n", 1 + *curLoop);
-	}
-	break;
-	case PLREVT_END:
-		if (playState & PLAYSTATE_END)
-			break;
-		playState |= PLAYSTATE_END;
-		printf("Song End.\n");
-		break;
-	}
-	return 0x00;
-}
-
-static DATA_LOADER* RequestFileCallback(void* userParam, PlayerBase* player, const char* fileName)
-{
-	DATA_LOADER* dLoad = FileLoader_Init(fileName);
-	UINT8 retVal = DataLoader_Load(dLoad);
-	if (!retVal)
-		return dLoad;
-	DataLoader_Deinit(dLoad);
-	return NULL;
-}
-
-static const char* LogLevel2Str(UINT8 level)
-{
-	static const char* LVL_NAMES[6] = { " ??? ", "Error", "Warn ", "Info ", "Debug", "Trace" };
-	if (level >= (sizeof(LVL_NAMES) / sizeof(LVL_NAMES[0])))
-		level = 0;
-	return LVL_NAMES[level];
-}
-
-static void PlayerLogCallback(void* userParam, PlayerBase* player, UINT8 level, UINT8 srcType,
-	const char* srcTag, const char* message)
-{
-	if (level > logLevel)
-		return;	// don't print messages with higher verbosity than current log level
-	if (srcType == PLRLOGSRC_PLR)
-		printf("[%s] %s: %s", LogLevel2Str(level), player->GetPlayerName(), message);
-	else
-		printf("[%s] %s %s: %s", LogLevel2Str(level), player->GetPlayerName(), srcTag, message);
-	return;
-}
-
-// Title 11小節 * 4
-UINT8 TestMain(char * vgmfile)
-{
-	UINT8 retVal;
-	playState = 0x00;
-	mainPlr.RegisterPlayerEngine(new VGMPlayer);
-	mainPlr.SetEventCallback(FilePlayCallback, NULL);
-	mainPlr.SetFileReqCallback(RequestFileCallback, NULL);
-	mainPlr.SetLogCallback(PlayerLogCallback, NULL);
-	{
-		PlayerA::Config pCfg = mainPlr.GetConfiguration();
-		pCfg.masterVol = masterVol;
-		pCfg.loopCount = maxLoops;
-		pCfg.fadeSmpls = sampleRate * 4;	// fade over 4 seconds
-		pCfg.endSilenceSmpls = sampleRate / 2;	// 0.5 seconds of silence at the end
-		pCfg.pbSpeed = 1.0;
-		mainPlr.SetConfiguration(pCfg);
-	}
-	DATA_LOADER* dLoad;
-
-	dLoad = FileLoader_Init(vgmfile);
-	if (dLoad == NULL)
-	{
-		printf("Error TestMaion.\n");
-		return 1;
-	}
-	DataLoader_SetPreloadBytes(dLoad, 0x100);
-	retVal = DataLoader_Load(dLoad);
-	if (retVal)
-	{
-		DataLoader_Deinit(dLoad);
-		fprintf(stderr, "Error 0x%02X loading file!\n", retVal);
-		return 1;
-	}
-	retVal = mainPlr.LoadFile(dLoad);
-	if (retVal)
-	{
-		DataLoader_Deinit(dLoad);
-		fprintf(stderr, "Error 0x%02X loading file!\n", retVal);
-		return 1;
-	}
-
-	PlayerBase* player = mainPlr.GetPlayer();
-	mainPlr.SetLoopCount(maxLoops);
-	if (player->GetPlayerType() == FCC_VGM)
-	{
-		VGMPlayer* vgmplay = dynamic_cast<VGMPlayer*>(player);
-		const VGM_HEADER* vgmhdr = vgmplay->GetFileHeader();
-		// 式  BPM = (小節*4) * (60s / file秒数)
-		FileTime = player->Tick2Second(player->GetTotalTicks()), player->Tick2Second(player->GetLoopTicks());
-		Frame = 11;
-		BPM = (Frame * 4) * (60 / FileTime);
-		printf("VGM v%3X, Total Length: %.2fs :BPM: %.2f", vgmhdr->fileVer, FileTime,BPM);
-	}
-	mainPlr.Stop();
-	mainPlr.UnloadFile();
-	DataLoader_Deinit(dLoad);	dLoad = NULL;
-
-	mainPlr.UnregisterAllPlayers();
-}
-// TestMain--------------------------------------------------
-#endif
-
 
 // get filename (out ext)--------------------------------------------------
 std::string GetFileName(std::string fullpath) {
@@ -498,7 +363,7 @@ int main(int argc, char* argv[])
 		sampleRate = 44100;
 		VGMEndFlag = false;
 		//StartRecord((44100.0*60) / (BPM / 4.0), (int)sampleRate/60);
-		m_Records = new MMLRecord(sampleRate,  dstfilename);
+		m_Records = new MMLRecord(sampleRate/60,  dstfilename);
 		for (int iI = 0; iI < 8; iI++) {
 			Register[iI] = 0;
 			RegisterWF[iI] = false;
@@ -564,12 +429,15 @@ int main(int argc, char* argv[])
 
 static void TestCallback()
 {
+	INT32 frameTickCount = 0;
+	INT32 frameTick = sampleRate / 60;
+	for (int iI = 0; iI < 8; iI++) {
+		RegisterWF[iI] = false;
+	}
 	while (!VGMEndFlag)
 	{
+		bool updatef = false;
 		UINT32 cmdLen;
-		for (int iI = 0; iI < 8; iI++) {
-			RegisterWF[iI] = false;
-		}
 		while (VGMSmplPos <= renderSmplPos)
 		{
 			cmdLen = DoVgmCommand(VGMData[VGMPos], &VGMData[VGMPos]);
@@ -580,15 +448,39 @@ static void TestCallback()
 			}
 			VGMPos += cmdLen;
 		}
-		//
-		for (int iI = 0; iI < 4; iI++) {
-			int index = iI << 1;
-			//if(RegisterWF[index])
-			{
-				m_Records->WriteRecord(iI, Register[index], Register[index + 1], renderSmplPos);
+		frameTickCount++;
+		if (frameTickCount >= frameTick) {
+			//
+			INT32 wframe = renderSmplPos / frameTick;
+			for (int iI = 0; iI < 4; iI++) {
+				int index = iI << 1;
+				if (((RegisterWF[index]) || (RegisterWF[index + 1])))
+				{
+					//printf("chan %d :: freq = %d:%d, vol=%d:0x%4x [%d]\n", iI, RegisterWF[index], Register[index], RegisterWF[index + 1], Register[index + 1], wframe);
+					m_Records->WriteRecord(iI, Register[index], Register[index + 1], wframe);
+				}
+			}
+			frameTickCount = 0;
+			renderSmplPos++;
+			for (int iI = 0; iI < 8; iI++) {
+				RegisterWF[iI] = false;
 			}
 		}
+	}
+	// record end data
+	if (frameTickCount != 0)
+	{
+		while (frameTickCount < frameTick) {
+			frameTickCount++;
+		}
 		renderSmplPos++;
+	}
+	INT32 wframe = renderSmplPos / frameTick;
+
+	//printf("[%d]\n", wframe);
+	for (int iI = 0; iI < 4; iI++) {
+		int index = iI << 1;
+		m_Records->WriteRecord(iI, Register[index], 0x000f, wframe);
 	}
 }
 

@@ -70,7 +70,7 @@ static void debugcallback()
 //------------------------------------------------------------------------------------
 int MMLRecord::CalcTime(int inframe)
 {
-    int retcode = inframe / m_BaseFrame;
+    int retcode = inframe;  // / m_BaseFrame;
     return retcode;
 }
 //------------------------------------------------------------------------------------
@@ -100,8 +100,9 @@ int MMLRecord::CalcNote(int freq)
 void MMLRecord::WriteRecord(int chan, unsigned short freq, unsigned short vol, int frameCount)
 {
     RecordTableP RecordTable = m_RecordTables[chan];
-    if (chan == 3)
+    if (chan == 0)
     {
+        //return;
         debugcallback();
     }
     bool addflag = false;
@@ -112,15 +113,8 @@ void MMLRecord::WriteRecord(int chan, unsigned short freq, unsigned short vol, i
     else
     {
         RecordDataP oldrecord = RecordTable->at(RecordTable->size() - 1);
-        if ((vol == oldrecord->vol) && (freq == oldrecord->freq))
-        {
-            // ひとつ前と同じデータなので同じ扱い
-
-            oldrecord->elaptime++;
-        }
-        else {
-            addflag = true;
-        }
+        oldrecord->elaptime = frameCount - oldrecord->starttime;
+        addflag = true;
     }
     if (addflag)
     {
@@ -137,7 +131,7 @@ void MMLRecord::WriteRecord(int chan, unsigned short freq, unsigned short vol, i
                 record->note = (int)freq;
             }
             record->vol = vol;
-            //record->starttime = frameCount;
+            record->starttime = frameCount;
             record->elaptime = 1;
             RecordTable->push_back(record);
         }
@@ -199,7 +193,9 @@ void MMLRecord::DumpRecord()
 
     if (fp != NULL)
     {
-        for (int iI = 0; iI < CH_MAX; ++iI)
+        int loopstart = 0;
+        int loopmax = CH_MAX;
+        for (int iI = loopstart; iI < loopmax; ++iI)
         {
             RecordTableP RecordTable = m_RecordTables[iI];
 
@@ -211,20 +207,25 @@ void MMLRecord::DumpRecord()
                     debugcallback();
                 }
                 RecordDataP record = RecordTable->at(LP);
-                int time = record->elaptime;    // -record->starttime;
+                int time = record->elaptime;
                 bool addf = false;
                 if (iI < (CH_MAX - 1))
                 {
                     if (newNoteValue == NULL)
                     {
                         addf = true;
+                        if ((time == 0)){
+                            addf = false;
+                        }
                     }
                     else if (newNoteValue->note == record->note)
                     {
                         addf = false;
-                        newNoteValue->time.push_back(time);
-                        newNoteValue->vol.push_back(record->vol);
-                        newNoteValue->totaltime += time;
+                        if (time != 0) {
+                            newNoteValue->time.push_back(time);
+                            newNoteValue->vol.push_back(record->vol);
+                            newNoteValue->totaltime += time;
+                        }
                     }
                     else
                     {
@@ -292,7 +293,7 @@ void MMLRecord::DumpRecord()
             {
                 int totaltime = CalcTime(record->totaltime);
                 calctime += record->totaltime;
-                if (record->note == 0)
+                if ((record->note == 0) || (15 == record->vol[0]))
                 {
                     str += std::format(" r:{}", totaltime);
                 }
